@@ -85,7 +85,10 @@
     const d = $('#' + id);
     d.innerHTML = '';
     const fechar = () => { if (d.open) d.close(); };
-    d.onclose = () => { aoFechar && aoFechar(); };
+    // O evento close chega depois de close(); se o diálogo já foi reaberto por outra tela, ele é ignorado.
+    // O conteúdo é limpo ao fechar para não sobrar formulário antigo no diálogo.
+    const geracao = (d._geracao = (d._geracao || 0) + 1);
+    d.onclose = () => { if (d.open || d._geracao !== geracao) return; aoFechar && aoFechar(); d.replaceChildren(); };
     d.append(
       h('div', { class: 'dlg-h' }, cod && h('div', { class: 'cod' }, cod), h('h3', null, titulo), botao('×', 'x', fechar, { 'aria-label': 'Fechar' })),
       h('div', { class: 'dlg-b' }, corpo),
