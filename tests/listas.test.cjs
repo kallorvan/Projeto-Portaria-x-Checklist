@@ -12,7 +12,7 @@ test('instante digitado', () => {
 test('instante sem hora usa criado', () => {
   assert.equal(L.instante({ Data: '30/12/2025', Hora: '', Minuto: '5' }, '2025-12-30T20:15:48.000Z'), '2025-12-30T20:15:48.000Z');
   assert.equal(L.instante({ Data: '30/12/2025', Hora: '24', Minuto: '5' }, '2025-12-30T20:15:48.000Z'), '2025-12-30T20:15:48.000Z');
-  assert.equal(L.instante({ Data: '2025-12-30', Hora: '7', Minuto: '5' }, '2025-12-30T20:15:48.000Z'), '2025-12-30T20:15:48.000Z');
+  assert.equal(L.instante({ Data: '30-12-2025', Hora: '7', Minuto: '5' }, '2025-12-30T20:15:48.000Z'), '2025-12-30T20:15:48.000Z');
 });
 
 test('placa', () => {
@@ -68,4 +68,12 @@ test('visitante: saída depois da meia-noite e visitante no local', () => {
   assert.equal(ps.find(x => x.id === 'vis-303').saida, null);
   assert.equal(a.categoria, 'visitante');
   assert.equal(a.portaria, 'MAC');
+});
+
+test('aceita colunas de escolha ({ Value }) e data ISO vindas do Power Automate', () => {
+  const it = { lista: 'frota', portaria: 'DIS', id: 900, criado: '2026-10-30T10:00:00.000Z', modificado: '2026-10-30T10:00:00.000Z', autor: 'P', editor: 'P',
+    campos: { Placa_cavalo: 'AAA1A11', Situacao: { Value: 'Chegada' }, Motorista: 'Zé', KM: 1000, Data: '2026-10-30T03:00:00Z', Hora: 7, Minuto: 5 }, anexos: [] };
+  const [p] = L.permanencias([it]);
+  assert.equal(p.entrada.em, new Date(2026, 9, 30, 7, 5).toISOString());
+  assert.equal(p.entrada.campos.km, 1000);
 });

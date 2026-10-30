@@ -5,16 +5,20 @@
 
   const R = (typeof module !== 'undefined' && module.exports) ? require('./regras.js') : root.Regras;
 
-  const txt = (v) => (v == null ? '' : String(v).trim());
+  // Colunas de escolha chegam do Power Automate como { Value: '...' }.
+  const txt = (v) => (v == null ? '' : typeof v === 'object' ? txt(v.Value) : String(v).trim());
   const chave = (v) => txt(v).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
   const num = (v) => { const n = Number(String(v == null ? '' : v).replace(/\D/g, '')); return txt(v) && Number.isFinite(n) ? n : null; };
 
   // Data DD/MM/AAAA + Hora + Minuto digitados pelo porteiro, na hora local; senão, a data de criação do item.
   function instante(campos, criado) {
-    const m = txt(campos.Data).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    const d = txt(campos.Data);
+    // DD/MM/AAAA (coluna de texto) ou AAAA-MM-DD… (coluna de data do SharePoint).
+    const br = d.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/), iso = d.match(/^(\d{4})-(\d{2})-(\d{2})/);
     const hh = txt(campos.Hora), mm = txt(campos.Minuto);
-    if (!m || !/^\d{1,2}$/.test(hh) || !/^\d{1,2}$/.test(mm) || +hh > 23 || +mm > 59) return criado;
-    return new Date(+m[3], +m[2] - 1, +m[1], +hh, +mm).toISOString();
+    if (!(br || iso) || !/^\d{1,2}$/.test(hh) || !/^\d{1,2}$/.test(mm) || +hh > 23 || +mm > 59) return criado;
+    const [dia, mes, ano] = br ? [br[1], br[2], br[3]] : [iso[3], iso[2], iso[1]];
+    return new Date(+ano, +mes - 1, +dia, +hh, +mm).toISOString();
   }
 
   function placa(v) {
