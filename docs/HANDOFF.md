@@ -59,4 +59,3 @@ bash scripts/empacotar.sh
 - **Fase 2:** se a TI registrar um app no Entra ID, trocar `armazenamento.js` pelo Microsoft Graph. Isso libera o celular, a aba do Teams e o login Microsoft.
 - **LGPD:** definir a política de retenção das fotos e dos documentos de visitantes.
 - **Fora desta versão:** manual ilustrado para os porteiros, importação do histórico das Lists, checklist de carro da empresa, desenho clicável de avarias e segundo alerta para "Não conforme".
-- **Push:** a sessão que criou o projeto não conseguiu enviar ao GitHub (a checagem automática de permissões bloqueou o `git push`).
