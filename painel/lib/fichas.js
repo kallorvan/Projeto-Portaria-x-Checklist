@@ -80,11 +80,11 @@
     { id: 'containerVazio', nome: 'Nº de lacre de segurança / container vazio inspecionado e aprovado' },
   ];
 
-  // O REG LOG 04 impresso traz "LOG 03" no Nº Reg.: copiado como está (ver docs/HANDOFF.md).
+  // A ficha impressa do REG LOG 04 traz "LOG 03" no Nº Reg. por erro; o painel usa "LOG 04" (confirmado pelo usuário).
   const CABECALHO_FICHAS = {
     '03': { titulo: 'Ficha para Inspeção Veicular Operacional', reg: 'LOG 03', revisao: '05', data: '20/05/2026',
       elaboracao: 'Anderson Santana', revisaoPor: 'Alef Azevedo', aprovacao: 'Altemar Campos' },
-    '04': { titulo: 'Ficha para Inspeção de Segurança de Veículos 17 Pontos', reg: 'LOG 03', revisao: '05', data: '20/05/2026',
+    '04': { titulo: 'Ficha para Inspeção de Segurança de Veículos 17 Pontos', reg: 'LOG 04', revisao: '05', data: '20/05/2026',
       elaboracao: 'Alisson Oliveira', revisaoPor: 'Alef Azevedo', aprovacao: 'Altemar Campos' },
   };
 

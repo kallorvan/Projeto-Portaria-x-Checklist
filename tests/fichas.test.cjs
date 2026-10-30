@@ -21,3 +21,8 @@ test('17 itens na ordem da ficha', () => {
 test('portarias', () => {
   assert.deepEqual(F.PORTARIAS.map(p => p.id), ['MAC', 'JP', 'DIS']);
 });
+
+test('cabeçalho do REG LOG 04 usa LOG 04', () => {
+  assert.equal(F.CABECALHO_FICHAS['04'].reg, 'LOG 04');
+  assert.equal(F.CABECALHO_FICHAS['03'].reg, 'LOG 03');
+});

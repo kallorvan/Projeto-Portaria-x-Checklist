@@ -54,8 +54,8 @@ bash scripts/empacotar.sh
 
 ## Pendências e pontos a confirmar com o usuário
 
-- **Cabeçalho do REG LOG 04:** a ficha em papel traz "LOG 03" no Nº Reg., e isso foi copiado como está (`Fichas.CABECALHO_FICHAS`). Confirmar se o certo é "LOG 04".
-- **"Já lacrado" no REG LOG 04:** o painel considera o veículo lacrado quando o campo "lacre de segurança / container vazio" está preenchido (`Regras.itensTravados`).
+- **Cabeçalho do REG LOG 04 (resolvido):** a ficha em papel traz "LOG 03" no Nº Reg. por erro da ficha. O usuário confirmou, e o painel usa "LOG 04". Vale avisar o responsável pela ficha impressa.
+- **"Já lacrado" no REG LOG 04 (confirmado pelo usuário):** o veículo é considerado lacrado quando o campo "lacre de segurança / container vazio" está preenchido (`Regras.itensTravados`).
 - **Fase 2:** se a TI registrar um app no Entra ID, trocar `armazenamento.js` pelo Microsoft Graph. Isso libera o celular, a aba do Teams e o login Microsoft.
 - **LGPD:** definir a política de retenção das fotos e dos documentos de visitantes.
 - **Fora desta versão:** manual ilustrado para os porteiros, importação do histórico das Lists, checklist de carro da empresa, desenho clicável de avarias e segundo alerta para "Não conforme".
