@@ -1,6 +1,6 @@
 # Portaria x Checklist — Especificação (versão de testes)
 
-Data: 30/10/2026 · Status: **aguardando revisão do usuário**
+Data: 30/10/2026 · Status: implementada (versão de testes). **Partes substituídas pela v2:** `2026-10-30-centro-de-controle-design.md` (entrada pelo Lists, portarias, cadastros, regra do 5º veículo).
 
 Origem: `docs/referencia/Projeto Portaria x Checklist.md` e as fichas REG LOG 03 e REG LOG 04 em `docs/referencia/`. As decisões abaixo foram fechadas em entrevista (formato *grilling*) com o usuário. Os termos seguem o [`GLOSSARY.md`](../../../GLOSSARY.md).
 
