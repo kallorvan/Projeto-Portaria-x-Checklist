@@ -6,9 +6,10 @@
   const eh = (p) => p.categoria === 'colaborador';
   let diaJornada = null;
 
-  const chaveDe = (nome) => { const fu = P.acharFuncionario(nome); return fu ? fu.id : 'nome:' + String(nome || '').trim().toLowerCase(); };
-  const abertaDe = (nome) => st.estado.noLocal(st.portaria).find(p => eh(p) && Estado.chaveColaborador(p.entrada.campos) === chaveDe(nome));
-  const emIntervalo = (nome) => st.estado.emIntervalo(st.portaria, P.diaLocal()).some(x => x.chave === chaveDe(nome));
+  // Um colaborador pode ter registros pela matrícula e pelo nome (se foi cadastrado durante o dia): aceita os dois.
+  const chavesDe = (nome) => { const fu = P.acharFuncionario(nome); const k = 'nome:' + String(nome || '').trim().toLowerCase(); return fu ? [fu.id, k] : [k]; };
+  const abertaDe = (nome) => { const ks = chavesDe(nome); return st.estado.noLocal(st.portaria).find(p => eh(p) && ks.includes(Estado.chaveColaborador(p.entrada.campos))); };
+  const emIntervalo = (nome) => { const ks = chavesDe(nome); return st.estado.emIntervalo(st.portaria, P.diaLocal()).some(x => ks.includes(x.chave)); };
 
   function formulario() {
     const nome = inp({ id: 'col-nome', list: 'dl-funcionarios', placeholder: 'Digite o nome do colaborador' });

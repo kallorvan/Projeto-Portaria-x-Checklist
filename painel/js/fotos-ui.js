@@ -5,7 +5,8 @@
   const A = window.Armazenamento;
   const { h, st } = P;
 
-  const pastaEntrada = () => ['fotos-entrada', P.portariaInfo(st.portaria).pasta];
+  // As fotos vêm da pasta da portaria do registro (o GR pode vistoriar veículo de outra portaria).
+  const pastaEntrada = (portaria) => ['fotos-entrada', P.portariaInfo(portaria || st.portaria).pasta];
   const urls = new Map(); // caminho → object URL (miniaturas já carregadas)
 
   async function url(caminho) {
@@ -29,10 +30,11 @@
 
   // Mostra as fotos da pasta de entrada da portaria; as marcadas são reduzidas, gravadas em fotos/... e
   // removidas da entrada. Resolve com os caminhos gravados (vazio se cancelar).
-  function escolherFotos({ alvo, ponto, rotulo }) {
+  function escolherFotos({ alvo, ponto, rotulo, portaria }) {
+    portaria = portaria || st.portaria;
     return new Promise(async (resolver) => {
       let feito = false;
-      const lista = (await A.listar(pastaEntrada())).filter(f => Fotos.ehImagem(f.nome)).sort((a, b) => b.modificado - a.modificado);
+      const lista = (await A.listar(pastaEntrada(portaria))).filter(f => Fotos.ehImagem(f.nome)).sort((a, b) => b.modificado - a.modificado);
       const galeria = h('div', { class: 'galeria' }, lista.length ? lista.map(f => {
         const box = Fotos.ehHeic(f.nome) ? h('div', { class: 'semfoto' }, 'Formato HEIC não suportado: ajuste a câmera do celular para JPG') : h('img', { alt: f.nome });
         if (!Fotos.ehHeic(f.nome)) f.handle.getFile().then(x => { box.src = URL.createObjectURL(x); });
@@ -40,16 +42,16 @@
       }) : h('p', { class: 'sec-note' }, 'Nenhuma foto na pasta de entrada desta portaria.'));
       const dlg = P.dialogo({
         id: 'dlg3', cod: 'Adicionar fotos', titulo: rotulo || 'Escolha as fotos',
-        corpo: [h('p', { class: 'sec-note', style: 'margin:0' }, `Fotos enviadas pelo celular (app OneDrive) para a pasta ${pastaEntrada().join('/')}. Marque as que pertencem a este ponto. Não apareceu? Aguarde a sincronização e clique em Atualizar.`), galeria],
+        corpo: [h('p', { class: 'sec-note', style: 'margin:0' }, `Fotos enviadas pelo celular (app OneDrive) para a pasta ${pastaEntrada(portaria).join('/')}. Marque as que pertencem a este ponto. Não apareceu? Aguarde a sincronização e clique em Atualizar.`), galeria],
         acoes: [
-          { txt: 'Atualizar', cls: 'btn ghost', fn: () => { feito = true; dlg.fechar(); escolherFotos({ alvo, ponto, rotulo }).then(resolver); } },
+          { txt: 'Atualizar', cls: 'btn ghost', fn: () => { feito = true; dlg.fechar(); escolherFotos({ alvo, ponto, rotulo, portaria }).then(resolver); } },
           { txt: 'Cancelar', cls: 'btn ghost', fn: () => dlg.fechar() },
           { txt: 'Vincular fotos marcadas', props: { id: 'fotos-ok' }, fn: async () => {
             const marcadas = [...galeria.querySelectorAll('input:checked')].map(i => lista.find(f => f.nome === i.value));
             if (!marcadas.length) return P.aviso('Marque ao menos uma foto.', 'err');
             const gravados = [];
             const ok = await P.acao(async () => {
-              const destino = Fotos.pastaDestino(P.portariaInfo(st.portaria).pasta, new Date());
+              const destino = Fotos.pastaDestino(P.portariaInfo(portaria).pasta, new Date());
               const existentes = new Set((await A.listar(destino)).map(f => f.nome));
               let n = 1;
               for (const f of marcadas) {
@@ -57,10 +59,10 @@
                 const nome = Fotos.nomeDestino({ alvo, ponto, n });
                 existentes.add(nome);
                 await A.gravarArquivo(destino, nome, await Fotos.reduzir(await f.handle.getFile()));
-                await A.remover(pastaEntrada(), f.nome);
+                await A.remover(pastaEntrada(portaria), f.nome);
                 const caminho = [...destino, nome].join('/');
                 gravados.push(caminho);
-                await P.gravar('foto_vinculada', st.portaria, { origem: f.nome, destino: caminho, alvo: { alvo, ponto } });
+                await P.gravar('foto_vinculada', portaria, { origem: f.nome, destino: caminho, alvo: { alvo, ponto } });
               }
             }, `${marcadas.length} foto(s) vinculada(s).`);
             if (ok) { feito = true; dlg.fechar(); resolver(gravados); }
@@ -72,10 +74,10 @@
   }
 
   // Bloco "Fotos" para formulários: miniaturas + botão "Adicionar fotos". lista é mutada.
-  function blocoFotos(lista, { alvo, ponto, rotulo }) {
+  function blocoFotos(lista, { alvo, ponto, rotulo, portaria }) {
     const box = h('div', { class: 'fotos' });
     const desenhar = () => box.replaceChildren(miniaturas(lista), P.botao(`Adicionar fotos${lista.length ? ` (${lista.length})` : ''}`, 'btn ghost', async () => {
-      const novos = await escolherFotos({ alvo: typeof alvo === 'function' ? alvo() : alvo, ponto, rotulo });
+      const novos = await escolherFotos({ alvo: typeof alvo === 'function' ? alvo() : alvo, ponto, rotulo, portaria });
       lista.push(...novos); desenhar();
     }, { 'data-ponto': ponto }));
     desenhar();

@@ -33,7 +33,7 @@
       obs.addEventListener('input', marcarObs);
       marcarObs();
       const linha = h('div', { class: 'item17', 'data-n': it.n }, h('span', { class: 'n' }, String(it.n)), h('b', null, it.nome), resp,
-        h('div', { class: 'extra' }, fld, P.blocoFotos(r.fotos, { alvo: `${p.portaria}-04-${pid}`, ponto: `item${it.n}`, rotulo: `${it.n}. ${it.nome}` })));
+        h('div', { class: 'extra' }, fld, P.blocoFotos(r.fotos, { alvo: `${p.portaria}-04-${pid}`, ponto: `item${it.n}`, rotulo: `${it.n}. ${it.nome}`, portaria: p.portaria })));
       linhas.set(it.n, { linha, resp, r });
       return linha;
     }));

@@ -41,7 +41,7 @@
       return h('div', { class: 'regiao', 'data-regiao': g.id },
         h('div', { class: 't' }, g.nome, h('label', { class: 'check' }, sem, 'Sem avarias')),
         h('div', { class: 'pessoas', style: 'justify-content:flex-start' }, codigos),
-        desc, P.blocoFotos(r.fotos, { alvo: `${p.portaria}-03-${pid}`, ponto: g.id, rotulo: g.nome }));
+        desc, P.blocoFotos(r.fotos, { alvo: `${p.portaria}-03-${pid}`, ponto: g.id, rotulo: g.nome, portaria: p.portaria }));
     };
 
     /* motorista */
