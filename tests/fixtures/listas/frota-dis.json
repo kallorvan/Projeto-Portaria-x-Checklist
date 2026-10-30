@@ -1,0 +1,11 @@
+[
+ {"lista":"frota","portaria":"DIS","id":101,"criado":"2025-12-30T10:01:20.000Z","modificado":"2025-12-30T10:01:20.000Z","autor":"Porteiro Distrito","editor":"Porteiro Distrito","link":"https://exemplo/Lists/Frota/DispForm.aspx?ID=101",
+  "campos":{"Placa_cavalo":"CUP-2J18 ","Placa_reboque1":"BML-6968","Placa_reboque2":"BPQ-8B95","Placa_reboque3":null,"Motorista":"Motorista A","Situacao":"Chegada","KM":"123456","Data":"30/12/2025","Hora":"7","Minuto":"1"},
+  "anexos":["fotos/Distrito/ctrc/101_ctrc1.jpg"]},
+ {"lista":"frota","portaria":"DIS","id":102,"criado":"2025-12-30T19:00:00.000Z","modificado":"2025-12-30T19:00:00.000Z","autor":"Porteiro Distrito","editor":"Porteiro Distrito","link":"https://exemplo/Lists/Frota/DispForm.aspx?ID=102",
+  "campos":{"Placa_cavalo":"CUP2J18","Placa_reboque1":"BML-6968","Placa_reboque2":null,"Placa_reboque3":null,"Motorista":"Motorista A","Situacao":"Saida","KM":"123470","Data":"30/12/2025","Hora":"16","Minuto":"0"},
+  "anexos":[]},
+ {"lista":"frota","portaria":"DIS","id":103,"criado":"2025-12-30T20:15:48.000Z","modificado":"2025-12-30T20:15:48.000Z","autor":"Porteiro Distrito","editor":"Porteiro Distrito","link":"https://exemplo/Lists/Frota/DispForm.aspx?ID=103",
+  "campos":{"Placa_cavalo":"QQH-9872","Placa_reboque1":null,"Placa_reboque2":null,"Placa_reboque3":null,"Motorista":"Motorista B","Situacao":"Saída","KM":"678094","Data":"30/12/2025","Hora":"17","Minuto":"14"},
+  "anexos":[]}
+]
