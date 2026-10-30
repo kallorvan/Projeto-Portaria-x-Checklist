@@ -128,6 +128,57 @@
       return r;
     }
 
+    // Checklists: última versão por número.
+    const ck = new Map();
+    for (const e of evs) {
+      if (e.tipo !== 'checklist_salvo') continue;
+      const d = e.dados || {};
+      const atual = ck.get(d.numero);
+      const versoes = atual ? [...atual.versoes, e] : [e];
+      if (atual && (atual.versao || 0) > (d.versao || 0)) { atual.versoes = versoes; continue; }
+      ck.set(d.numero, {
+        numero: d.numero, ficha: d.ficha, portaria: e.portaria, permanenciaId: d.permanenciaId, versao: d.versao || 1,
+        dados: d.dados || {}, pdf: d.pdf || null, em: e.em, pessoa: e.pessoa,
+        criadoPor: atual ? atual.criadoPor : e.pessoa, motivo: d.motivo || null,
+        naoConforme: d.ficha === '04' && R.temNaoConforme(d.dados), versoes,
+      });
+    }
+    const checklists = [...ck.values()].sort((a, b) => (a.em < b.em ? 1 : -1));
+
+    // Vistorias 17 pontos: derivadas das chegadas da frota de cada portaria (ADR 0002).
+    const vistorias = [];
+    const contadores = {};
+    const porPerm = new Map();
+    const chegadas = permanencias.filter(p => p.categoria === 'frota' && p.entrada)
+      .sort((a, b) => (a.entrada.em < b.entrada.em ? -1 : a.entrada.em > b.entrada.em ? 1 : a.id < b.id ? -1 : 1));
+    for (const p of chegadas) {
+      const c = contadores[p.portaria] || (contadores[p.portaria] = { chegadas: 0, faltam: R.A_CADA });
+      c.chegadas++; c.faltam = R.faltamParaVistoria(c.chegadas);
+      if (R.indicesVistoria(c.chegadas)) {
+        const v = { permanenciaId: p.id, portaria: p.portaria, origem: 'automatica', ordem: c.chegadas, situacao: 'pendente', justificativa: null, checklistNumero: null, desde: p.entrada.em };
+        vistorias.push(v); porPerm.set(p.id, v);
+      }
+    }
+    for (const e of evs) {
+      const d = e.dados || {};
+      if (e.tipo === 'vistoria17_forcada' && !porPerm.has(d.permanenciaId)) {
+        const p = perm.get(d.permanenciaId);
+        if (!p || !p.entrada) continue;
+        const v = { permanenciaId: p.id, portaria: p.portaria, origem: 'forcada', ordem: null, situacao: 'pendente', justificativa: d.justificativa || '', checklistNumero: null, desde: p.entrada.em };
+        vistorias.push(v); porPerm.set(p.id, v);
+      }
+    }
+    for (const e of evs) {
+      const d = e.dados || {};
+      const v = porPerm.get(d.permanenciaId);
+      if (!v) continue;
+      if (e.tipo === 'checklist_salvo' && d.ficha === '04' && v.situacao !== 'concluida') {
+        v.situacao = 'concluida'; v.checklistNumero = d.numero;
+      } else if (e.tipo === 'vistoria17_dispensada' && v.situacao === 'pendente') {
+        v.situacao = 'dispensada'; v.justificativa = d.justificativa || ''; v.dispensadaPor = e.pessoa;
+      }
+    }
+
     const noLocal = (portaria) => permanencias.filter(p => p.entrada && !p.saida && p.portaria === portaria);
 
     return {
@@ -135,7 +186,7 @@
       pessoas: [...pessoas.values()].sort((a, b) => a.nome.localeCompare(b.nome)),
       veiculos, funcionarios, permanencias,
       noLocal, jornadas, emIntervalo,
-      checklists: [], vistorias: [], contadores: {},
+      checklists, vistorias, contadores,
       eventos: evs,
     };
   }
