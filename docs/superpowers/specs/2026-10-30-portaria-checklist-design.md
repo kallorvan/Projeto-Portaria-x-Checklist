@@ -91,6 +91,18 @@ Em todo registro, data, hora, portaria, "criado por" e "data de criação/modifi
 
 Não há checklist para carro da empresa nesta versão.
 
+**Colaboradores no dia a dia.** Normalmente são 2 entradas e 2 saídas por dia: entrada de manhã, saída para o intervalo, retorno e saída final. Cada par entrada → saída é uma permanência.
+
+- **Registro rápido:** o porteiro busca o nome e vê um único botão:
+  - **Registrar entrada**, se o colaborador está fora;
+  - **Registrar saída**, se está dentro.
+- **Motivo da saída:** Intervalo, Fim do expediente ou Outro (com observação).
+- **Retorno:** a entrada depois de uma saída para o Intervalo no mesmo dia aparece como **Retorno**.
+- **Em intervalo:** quem saiu para o intervalo e ainda não voltou aparece no Início separado de quem já foi embora.
+- **Jornada do dia:** visão com uma linha por colaborador e as marcações em ordem. Por exemplo: *Entrada 07:02 · Saída 11:58 (intervalo) · Retorno 13:01 · Saída 17:05*. Também sai no CSV.
+- **KM:** com carro da empresa, o KM é pedido em toda entrada e saída.
+- **Não é ponto eletrônico:** sem cálculo de horas trabalhadas, horas extras ou banco de horas.
+
 ## 6. REG LOG 03 – Inspeção Veicular Operacional
 
 Preenchido **em toda chegada da frota**, logo após registrar a entrada (só na chegada). Blocos:

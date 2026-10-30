@@ -71,7 +71,8 @@
 
 **`campos` da saída:**
 - visitante/prestador: `{ crachaDevolvido: bool }`;
-- frota e colaborador da empresa: `{ km }`.
+- frota: `{ km }`;
+- colaborador: `{ motivo: 'intervalo'|'fim'|'outro', km, observacao }`.
 
 ## Review Focus
 
@@ -189,6 +190,10 @@
                    foraDoCadastro: string[],   // ex.: ['placa:ABC1D23', 'motorista', 'funcionario']
                    historico: Evento[] }],
   noLocal(portaria) -> permanência[]           // entrada sem saída
+  emIntervalo(portaria, dia: 'AAAA-MM-DD') -> [{ chave, nome, saida }]  // última permanência do dia com motivo intervalo e sem entrada depois
+  jornadas(portaria, dia) -> [{ chave, nome, marcacoes: [{ tipo: 'entrada'|'retorno'|'saida', em, motivo? }] }]
+  // chave do colaborador = funcionarioId ou 'nome:<nome em minúsculas>'; dia pela data local de `em`
+  // a permanência de colaborador ganha `retorno: bool` (a saída anterior do mesmo colaborador no mesmo dia teve motivo 'intervalo')
   checklists, vistorias, contadores            // preenchidos na Task 4
 }
 ```
@@ -213,6 +218,16 @@
   - com o veículo `ABC1D23` cadastrado, a chegada da frota com `placaCavalo:'abc-1d23'` e o reboque `ZZZ9Z99` dá `foraDoCadastro` deep-equal `['placa:ZZZ9Z99','motorista']`;
   - `pessoa_adicionada` + `papeis_definidos` + `pessoa_removida` refletem em `pessoas`;
   - `funcionario_salvo` repetido com o mesmo `id` → vale o último.
+  - O colaborador `f1` tem quatro movimentos no dia 30/10:
+    - entrada 07:02;
+    - saída 11:58, motivo `intervalo`;
+    - entrada 13:01;
+    - saída 17:05, motivo `fim`.
+
+    Resultado esperado:
+    - `jornadas('MAC','2026-10-30')[0].marcacoes.map(m=>m.tipo)` deep-equals `['entrada','saida','retorno','saida']`;
+    - às 12:30, `emIntervalo` tem `f1`;
+    - depois do retorno, não tem.
 - [ ] **Step 2:** `npm test`. Esperado: FAIL.
 - [ ] **Step 3:** Implemente `painel/lib/estado.js` (`root.Estado`). Deixe `checklists: []`, `vistorias: []` e `contadores: {}` para a Task 4.
 - [ ] **Step 4:** `npm test`. Esperado: PASS.
@@ -431,8 +446,15 @@
   4. se a nova permanência tem vistoria, grava `alertas/<montarAlerta.nome>`;
   5. chama `abrirChecklist03`.
 
+**Colaboradores:**
+- **Registro rápido:** busca por nome e um botão único: "Registrar entrada" quando não há permanência aberta, ou "Registrar saída" quando há.
+  - A saída pede o motivo (Intervalo / Fim do expediente / Outro + observação).
+  - A entrada depois de uma saída por intervalo é exibida como "Retorno".
+- **Visão "Jornada do dia":** uma linha por colaborador, a partir de `estado.jornadas`, com o seletor de dia e Exportar CSV, uma coluna por marcação.
+- Com veículo da empresa, o KM é obrigatório na entrada e na saída.
+
 **Início:**
-- KPIs: no local agora por categoria, entradas de hoje, crachás não devolvidos (saída com `crachaDevolvido:false` ou visitante no local há mais de 12 h), vistorias pendentes;
+- KPIs: no local agora por categoria, em intervalo, entradas de hoje, crachás não devolvidos (saída com `crachaDevolvido:false` ou visitante no local há mais de 12 h), vistorias pendentes;
 - contador para o próximo 17 pontos;
 - fotos aguardando vínculo (contagem de `fotos-entrada/<portaria>`);
 - quem está no painel agora.
@@ -441,6 +463,8 @@
   - registra um visitante e dá saída com o crachá devolvido → `noLocal('MAC').length === 0`;
   - registra 5 chegadas da frota (fechando o diálogo do checklist 03 que abre, que ainda é stub). Na 5ª, antes de gravar, o destaque "Este veículo vai para vistoria GR" está visível. Depois existe 1 arquivo em `alertas/` cujo JSON tem `mensagem` contendo `"Vistoria 17 pontos"`;
   - colaborador com `veiculo:'empresa'` sem placa → mensagem de campo obrigatório e nada gravado;
+  - colaborador: entrada, saída com motivo Intervalo e nova entrada → a Jornada do dia mostra "Retorno";
+  - o botão rápido alterna entre "Registrar entrada" e "Registrar saída";
   - Exportar CSV de Visitantes → o download começa com `﻿` e contém o nome.
 - [ ] **Step 2:** `npm run e2e`. Esperado: FAIL.
 - [ ] **Step 3:** Implemente.

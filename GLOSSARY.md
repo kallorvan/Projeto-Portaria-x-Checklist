@@ -24,6 +24,13 @@ Pessoa externa que entra na portaria. O Prestador presta serviço; o Visitante, 
 **Colaborador**:
 Funcionário entrando ou saindo, a pé, com carro próprio ou com veículo da empresa.
 
+**Jornada do dia**:
+Marcações de um colaborador num dia, em ordem: entrada, saída (intervalo), retorno, saída. Não é ponto eletrônico.
+_Evitar_: ponto, folha de ponto
+
+**Retorno / Em intervalo**:
+Retorno é a entrada do colaborador depois de uma saída com motivo Intervalo no mesmo dia. Em intervalo é quem saiu para o intervalo e ainda não voltou.
+
 **Chegada da frota**:
 Entrada de um veículo da frota (cavalo + reboques) numa portaria. É o que conta para a regra do 5º veículo.
 _Evitar_: entrada de caminhão
