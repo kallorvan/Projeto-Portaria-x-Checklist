@@ -30,7 +30,9 @@
       h('dt', null, 'Chegada'), h('dd', null, P.dataHora(p.entrada.em)),
       h('dt', null, 'Cavalo'), h('dd', { class: 'nm' }, c.placaCavalo),
       h('dt', null, 'Reboques'), h('dd', { class: 'nm' }, (c.reboques || []).join(' / ') || '—'),
-      h('dt', null, 'Motorista'), h('dd', null, c.motoristaNome || '—')));
+      h('dt', null, 'Motorista'), h('dd', null, c.motoristaNome || '—'),
+      (c.anexos || []).length ? [h('dt', null, 'Fotos do CTRC'), h('dd', null, P.miniaturas(c.anexos))] : null,
+      p.link ? [h('dt', null, 'Registro'), h('dd', null, P.linkLists(p))] : null));
   }
 
   const secao = (titulo, ...filhos) => h('div', { class: 'card form-card' }, h('h3', null, titulo), ...filhos);

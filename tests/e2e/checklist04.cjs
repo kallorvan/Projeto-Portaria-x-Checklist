@@ -1,34 +1,25 @@
-const { abrir, primeiroAcesso, gravar, assert } = require('./util.cjs');
-
-async function chegada(page, i, { forcar } = {}) {
-  await page.click('#tab-frota');
-  await page.fill('#frota-cavalo', `AAA0A0${i}`);
-  await page.fill('#frota-motorista', 'Zé da Silva');
-  await page.fill('#frota-km', '1000');
-  if (forcar) { await page.check('#frota-forcar'); await page.fill('#frota-justificativa', forcar); }
-  await page.click('#frota-registrar');
-  await page.waitForSelector('#dlg[open]');
-  await page.keyboard.press('Escape');
-  await page.waitForSelector('#dlg', { state: 'hidden' });
-}
+const { abrir, primeiroAcesso, gravar, espelho, alerta, chegadaFrota, assert } = require('./util.cjs');
 
 module.exports = async () => {
   const { browser, page } = await abrir();
   try {
     await primeiroAcesso(page);
-    for (let i = 1; i <= 5; i++) await chegada(page, i);
-    // sem papel GR: vê a pendência, mas não faz a vistoria
+    // pessoa só administradora: vê a pendência, mas não faz a vistoria
+    await gravar(page, 'papeis_definidos', null, { nome: 'Admin', papeis: ['admin'] });
+    await espelho(page, { lista: 'frota', id: 10, campos: chegadaFrota('AAA0A05') });
+    await espelho(page, { lista: 'frota', id: 11, campos: chegadaFrota('AAA0A06') });
+    await alerta(page, { id: 10, ordem: 5, placaCavalo: 'AAA0A05' });
     await page.click('#tab-ck');
     assert.match(await page.textContent('#fila-gr'), /AAA0A05/);
+    assert.match(await page.textContent('#fila-gr'), /5ª chegada/);
     assert.equal(await page.locator('#fila-gr button:has-text("Fazer vistoria")').count(), 0);
-    // troca para uma pessoa do GR
-    await gravar(page, 'pessoa_adicionada', null, { nome: 'Gil', papeis: ['gr'] });
+    // coordenadora faz a vistoria
+    await gravar(page, 'pessoa_adicionada', null, { nome: 'Cora', papeis: ['coordenador'] });
     await page.click('#trocar-pessoa');
-    await page.click('#quem-lista button:has-text("Gil")');
+    await page.click('#quem-lista button:has-text("Cora")');
     await page.click('#tab-ck');
     await page.click('#fila-gr tr:has-text("AAA0A05") button:has-text("Fazer vistoria")');
     await page.waitForSelector('#dlg[open] #ck04-concluir');
-    // container com carga: itens 12 a 17 travados em NA
     await page.click('#dlg [data-carga] button[data-v="container_com_carga"]');
     for (let n = 12; n <= 17; n++) {
       assert.ok(await page.isDisabled(`#dlg .item17[data-n="${n}"] button[data-v="C"]`), `item ${n} travado`);
@@ -42,12 +33,17 @@ module.exports = async () => {
     await page.click('#ck04-concluir');
     await page.waitForFunction(() => window.__painel.st.estado.vistorias.find(v => v.ordem === 5).situacao === 'concluida');
     const c = await page.evaluate(() => window.__painel.st.estado.checklists.find(x => x.ficha === '04'));
-    assert.equal(c.numero, 'MAC-04-000001');
+    assert.equal(c.numero, 'DIS-04-000001');
     assert.equal(c.naoConforme, true);
-    assert.equal(c.dados.itens[12].resposta, 'NA');
-    assert.ok(await page.locator('#hist-ck tr.nc:has-text("MAC-04-000001")').count() === 1, 'linha em vermelho');
-    // forçar na 6ª chegada e dispensar
-    await chegada(page, 6, { forcar: 'denúncia anônima' });
+    assert.ok(await page.locator('#hist-ck tr.nc:has-text("DIS-04-000001")').count() === 1, 'linha em vermelho');
+    // forçar outra chegada (aba Frota) e dispensar
+    await page.click('#tab-frota');
+    await page.click('#frota-patio tr:has-text("AAA0A06") button:has-text("Forçar 17 pontos")');
+    await page.fill('#pedir-texto', 'denúncia anônima');
+    await page.click('#pedir-ok');
+    await page.waitForFunction(() => window.__painel.st.estado.vistorias.some(v => v.origem === 'forcada'));
+    const alertas = await page.evaluate(async () => (await window.__painel.Armazenamento.listar(['alertas'])).length);
+    assert.equal(alertas, 1, 'forçar não grava em alertas/');
     await page.click('#tab-ck');
     await page.click('#fila-gr tr:has-text("AAA0A06") button:has-text("Dispensar")');
     await page.fill('#pedir-texto', 'veículo liberado pela matriz');

@@ -7,12 +7,13 @@
   function dadosIniciais(p) {
     return {
       limpeza: { limpo: null, lixo: null, odor: null }, regioes: {}, motorista: {}, cabine: '', estepes: '', carretaDianteira: '', carretaTraseira: '',
-      container: '', lacre: '', nomes: { motorista: p.entrada.campos.motoristaNome || '', porteiro: st.pessoa || '', lider: '' },
+      container: '', lacre: '', nomes: { motorista: p.entrada.campos.motoristaNome || '', porteiro: p.entrada.pessoa || '', lider: '' },
     };
   }
 
   // corrigir: número do checklist a corrigir (abre preenchido e pede o motivo ao salvar).
   async function abrirChecklist03(pid, { corrigir } = {}) {
+    if (!P.podeVistoriar()) return P.aviso('Só o GR e o coordenador fazem as vistorias.', 'err');
     const p = st.estado.permanencias.find(x => x.id === pid);
     if (!p || !p.entrada) return P.aviso('Registro de chegada não encontrado.', 'err');
     const existente = corrigir ? st.estado.checklists.find(c => c.numero === corrigir) : null;

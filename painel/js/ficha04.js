@@ -15,9 +15,9 @@
   }
 
   async function abrirChecklist04(pid, { corrigir } = {}) {
-    if (!P.temPapel('gr')) return P.aviso('Só pessoas do GR preenchem a vistoria 17 pontos.', 'err');
+    if (!P.podeVistoriar()) return P.aviso('Só o GR e o coordenador fazem as vistorias.', 'err');
     const p = st.estado.permanencias.find(x => x.id === pid);
-    if (!p || !p.entrada) return P.aviso('Registro de chegada não encontrado.', 'err');
+    if (!p || !p.entrada) return P.aviso('A chegada deste alerta ainda não chegou do Lists. Aguarde a sincronização e tente de novo.', 'err');
     const existente = corrigir ? st.estado.checklists.find(c => c.numero === corrigir) : null;
     const d = existente ? JSON.parse(JSON.stringify(existente.dados)) : (P.lerRascunho('04', pid) || dadosIniciais(p));
     let concluido = false;

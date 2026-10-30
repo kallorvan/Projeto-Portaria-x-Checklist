@@ -1,4 +1,4 @@
-// Aba Checklists: fila do GR (vistorias 17 pontos pendentes) e histórico dos REG LOG 03 e 04.
+// Aba Vistorias (Distrito): fila do checklist 03 (toda chegada), fila do 17 pontos e histórico dos REG LOG 03 e 04.
 (function () {
   'use strict';
   const P = window.Painel;
@@ -11,27 +11,44 @@
 
   async function dispensar(v) {
     const p = permDe(v.permanenciaId);
-    const j = await P.pedirTexto(`Dispensar vistoria 17 pontos · ${p.entrada.campos.placaCavalo}`, 'Justificativa', { cod: 'Exceção à regra do 5º veículo' });
+    const placa = p && p.entrada ? p.entrada.campos.placaCavalo : (v.alerta || {}).placaCavalo || '';
+    const j = await P.pedirTexto(`Dispensar vistoria 17 pontos · ${placa}`, 'Justificativa', { cod: 'Exceção à regra do 5º veículo' });
     if (j) await P.acao(() => P.gravar('vistoria17_dispensada', v.portaria, { permanenciaId: v.permanenciaId, justificativa: j }), 'Vistoria dispensada.');
   }
 
-  function filaGr() {
-    const gr = P.temPapel('gr');
-    const lista = st.estado.vistorias.filter(v => v.situacao === 'pendente' && (gr || v.portaria === st.portaria)).sort((a, b) => (a.desde < b.desde ? -1 : 1));
+  function fila03() {
+    const pode = P.podeVistoriar();
+    const lista = st.estado.noLocal('DIS').filter(p => p.categoria === 'frota' && !st.estado.checklists.some(c => c.ficha === '03' && c.permanenciaId === p.id))
+      .sort((a, b) => (a.entrada.em < b.entrada.em ? -1 : 1));
     return h('div', { class: 'sec' },
-      h('div', { class: 'sec-h' }, h('h2', null, `Fila do GR · vistorias 17 pontos pendentes (${lista.length})`), h('span', { class: 'sec-note' }, gr ? 'Todas as portarias.' : 'Só pessoas do GR fazem ou dispensam a vistoria.')),
-      h('div', { class: 'tbl-scroll' }, h('table', { id: 'fila-gr' }, h('thead', null, h('tr', null, ['Portaria', 'Cavalo', 'Reboques', 'Motorista', 'Chegada', 'Origem', 'Pendente há', ''].map(t => h('th', null, t)))),
+      h('div', { class: 'sec-h' }, h('h2', null, `Aguardando checklist 03 (${lista.length})`), h('span', { class: 'sec-note' }, 'Toda chegada da frota na Distrito, da mais antiga para a mais nova.')),
+      h('div', { class: 'tbl-scroll' }, h('table', { id: 'fila-03' }, h('thead', null, h('tr', null, ['Cavalo', 'Reboques', 'Motorista', 'Chegada', 'Esperando há', ''].map(t => h('th', null, t)))),
+        h('tbody', null, lista.length ? lista.map(p => {
+          const c = p.entrada.campos;
+          return h('tr', null, h('td', { class: 'nm' }, c.placaCavalo), h('td', { class: 'nm' }, (c.reboques || []).join(' / ')), h('td', null, c.motoristaNome || ''),
+            h('td', { class: 'num' }, P.dataHora(p.entrada.em)), h('td', null, h('span', { class: 'tag warn' }, P.duracao(p.entrada.em))),
+            h('td', null, pode ? botao('Fazer checklist 03', 'send', () => P.abrirChecklist03(p.id)) : null, ' ', P.linkLists(p)));
+        }) : h('tr', null, h('td', { colspan: 6, class: 'sec-note' }, 'Nenhuma chegada aguardando o checklist 03.'))))));
+  }
+
+  function filaGr() {
+    const pode = P.podeVistoriar();
+    const lista = st.estado.vistorias.filter(v => v.situacao === 'pendente').sort((a, b) => (a.desde < b.desde ? -1 : 1));
+    return h('div', { class: 'sec' },
+      h('div', { class: 'sec-h' }, h('h2', null, `Vistorias 17 pontos pendentes (${lista.length})`), h('span', { class: 'sec-note' }, pode ? 'Geradas pelo fluxo a cada 5 chegadas, ou forçadas.' : 'Só o GR e o coordenador fazem ou dispensam a vistoria.')),
+      h('div', { class: 'tbl-scroll' }, h('table', { id: 'fila-gr' }, h('thead', null, h('tr', null, ['Cavalo', 'Reboques', 'Motorista', 'Chegada', 'Origem', 'Pendente há', ''].map(t => h('th', null, t)))),
         h('tbody', null, lista.length ? lista.map(v => {
-          const c = permDe(v.permanenciaId).entrada.campos;
-          return h('tr', null, h('td', null, P.portariaInfo(v.portaria).pasta), h('td', { class: 'nm' }, c.placaCavalo), h('td', { class: 'nm' }, (c.reboques || []).join(' / ')),
+          const p = permDe(v.permanenciaId);
+          const c = p && p.entrada ? p.entrada.campos : { placaCavalo: (v.alerta || {}).placaCavalo || '', reboques: (v.alerta || {}).reboques || [], motoristaNome: (v.alerta || {}).motorista || '' };
+          return h('tr', null, h('td', { class: 'nm' }, c.placaCavalo), h('td', { class: 'nm' }, (c.reboques || []).join(' / ')),
             h('td', null, c.motoristaNome || ''), h('td', { class: 'num' }, P.dataHora(v.desde)),
             h('td', null, v.origem === 'automatica' ? `automática · ${v.ordem}ª chegada` : h('span', { title: v.justificativa }, `forçada: ${v.justificativa}`)),
             h('td', null, h('span', { class: 'tag warn' }, P.duracao(v.desde))),
-            h('td', null, gr ? [botao('Fazer vistoria', 'send', () => P.abrirChecklist04(v.permanenciaId)), ' ', botao('Dispensar', 'btn ghost', () => dispensar(v))] : null));
-        }) : h('tr', null, h('td', { colspan: 8, class: 'sec-note' }, 'Nenhuma vistoria pendente.'))))));
+            h('td', null, pode ? [botao('Fazer vistoria', 'send', () => P.abrirChecklist04(v.permanenciaId)), ' ', botao('Dispensar', 'btn ghost', () => dispensar(v))] : null));
+        }) : h('tr', null, h('td', { colspan: 7, class: 'sec-note' }, 'Nenhuma vistoria pendente.'))))));
   }
 
-  function podeCorrigir(c) { return c.criadoPor === st.pessoa || (P.temPapel('admin') && st.adminOk); }
+  function podeCorrigir() { return P.podeVistoriar(); }
 
   async function abrirPdf(c) {
     if (!c.pdf) return P.aviso('Este checklist não tem PDF.', 'err');
@@ -51,12 +68,12 @@
       id: 'dlg', cod: `REG LOG ${c.ficha} · ${P.portariaInfo(c.portaria).nome}`, titulo: `${c.numero} · ${placaDe(c)}`,
       corpo: [c.naoConforme ? h('p', { class: 'msg err', style: 'margin:0' }, 'Vistoria com item Não conforme.') : null, resumo, h('h4', { style: 'margin:0' }, 'Versões'), versoes],
       acoes: [{ txt: 'Fechar', cls: 'btn ghost', fn: () => dlg.fechar() }, { txt: 'Abrir PDF', cls: 'btn ghost', fn: () => abrirPdf(c) },
-        ...(podeCorrigir(c) && (c.ficha === '03' || P.temPapel('gr')) ? [{ txt: 'Corrigir', fn: () => { dlg.fechar(); (c.ficha === '03' ? P.abrirChecklist03 : P.abrirChecklist04)(c.permanenciaId, { corrigir: c.numero }); } }] : [])],
+        ...(podeCorrigir() ? [{ txt: 'Corrigir', fn: () => { dlg.fechar(); (c.ficha === '03' ? P.abrirChecklist03 : P.abrirChecklist04)(c.permanenciaId, { corrigir: c.numero }); } }] : [])],
     });
   }
 
   function historico() {
-    filtro.portaria = filtro.portaria || P.portariaVista();
+    filtro.portaria = filtro.portaria || 'DIS';
     filtro.de = filtro.de || P.diaLocal(new Date(Date.now() - 29 * 86400000));
     filtro.ate = filtro.ate || P.diaLocal();
     const lista = () => st.estado.checklists.filter(c => (filtro.portaria === 'todas' || c.portaria === filtro.portaria) && (!filtro.ficha || c.ficha === filtro.ficha)
@@ -83,6 +100,6 @@
 
   P.telas.ck = {
     preservar: true,
-    render(alvo) { alvo.replaceChildren(filaGr(), historico()); },
+    render(alvo) { alvo.replaceChildren(fila03(), filaGr(), historico()); },
   };
 })();
