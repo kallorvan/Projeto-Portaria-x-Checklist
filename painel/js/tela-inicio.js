@@ -36,7 +36,7 @@
       if (P.temPapel('admin') && foraCad) avisos.push(h('p', { class: 'msg info' }, `${foraCad} registro(s) com placa ou pessoa fora do cadastro. `, botao('Ver em Cadastros', 'linkbtn', () => P.trocarAba('cad'))));
 
       alvo.replaceChildren(
-        h('div', { class: 'sec-h sec' }, h('h2', null, `No local agora · ${P.portariaInfo(por).nome}`), h('span', { class: 'sec-note' }, `Atualizado às ${P.hora(new Date())}`)),
+        h('div', { class: 'sec' }, h('div', { class: 'sec-h' }, h('h2', null, `No local agora · ${P.portariaInfo(por).nome}`), h('span', { class: 'sec-note' }, `Atualizado às ${P.hora(new Date())}`))),
         h('div', { class: 'kpis', style: 'margin-top:0' },
           kpi('Visitantes e prestadores', vis, 'no local agora', '', 'vis', 'kpi-vis'),
           kpi('Frota', frota, 'no local agora', '', 'frota', 'kpi-frota'),

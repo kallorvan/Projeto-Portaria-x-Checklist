@@ -6,3 +6,4 @@ Painel HTML sem servidor para as portarias da Tóliman (visitantes, frota, colab
 - Use os termos de [`GLOSSARY.md`](GLOSSARY.md) no código, na interface e nos documentos.
 - Decisões de arquitetura ficam em `docs/adr/`. Documentos de origem (pedido e fichas em PDF) ficam em `docs/referencia/`.
 - Converse com o usuário em português. Ele costuma responder "siga com o recomendado".
+- Comece por `docs/HANDOFF.md`. Testes: `npm test` (regras) e `npm run e2e` (navegador, modo demonstração). Pacote: `bash scripts/empacotar.sh`.
