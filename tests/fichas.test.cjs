@@ -19,7 +19,8 @@ test('17 itens na ordem da ficha', () => {
 });
 
 test('portarias', () => {
-  assert.deepEqual(F.PORTARIAS.map(p => p.id), ['MAC', 'JP', 'DIS']);
+  assert.deepEqual(F.PORTARIAS.map(p => p.id), ['DIS', 'MAC']);
+  assert.deepEqual(F.PORTARIAS.map(p => p.frota), [true, false]);
 });
 
 test('cabeçalho do REG LOG 04 usa LOG 04', () => {

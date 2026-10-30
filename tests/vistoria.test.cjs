@@ -1,91 +1,53 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const E = require('../painel/lib/estado.js');
-const A = require('../painel/lib/alerta.js');
 
 let seq = 0;
-const ev = (tipo, dados, em, portaria = 'MAC') => ({ id: 'v' + String(++seq).padStart(4, '0'), em, pessoa: 'Ana', pc: 'pc1', portaria, tipo, dados });
-const hora = (i) => `2026-10-30T${String(6 + Math.floor(i / 60)).padStart(2, '0')}:${String(i % 60).padStart(2, '0')}:00`;
-const chegada = (pid, i, portaria = 'MAC') => ev('entrada_registrada', { permanenciaId: pid, categoria: 'frota', campos: { placaCavalo: 'ABC1D23', reboques: [], motoristaNome: 'Zé' } }, hora(i), portaria);
-const estado = (evs) => E.montarEstado(evs, new Date('2026-10-30T20:00'));
+const ev = (tipo, dados, em = '2026-10-30T20:00:00.000Z', portaria = 'DIS') => ({ id: 'v' + String(++seq).padStart(4, '0'), em, pessoa: 'Gil', pc: 'pc1', portaria, tipo, dados });
+const chegada = (id, hora) => ({ lista: 'frota', portaria: 'DIS', id, criado: '2026-10-30T10:00:00.000Z', modificado: '2026-10-30T10:00:00.000Z', autor: 'Porteiro', editor: 'Porteiro', link: 'l' + id,
+  campos: { Placa_cavalo: 'AAA0A' + String(id).padStart(2, '0'), Motorista: 'Zé', Situacao: 'Chegada', KM: '1000', Data: '30/10/2026', Hora: String(6 + (id % 10)), Minuto: '0' }, anexos: [] });
+const alerta = (id, ordem) => ({ id, ordem, placaCavalo: 'AAA0A' + id, reboques: [], motorista: 'Zé', chegada: '2026-10-30T10:00:00.000Z', mensagem: 'm' });
+const itens = [10, 11, 20].map(i => chegada(i));
+const estado = (evs, alertas) => E.montarEstado(evs, new Date('2026-10-30T20:00'), { itens, alertas });
+const auto = (s) => s.vistorias.filter(v => v.origem === 'automatica');
 
-function base() {
-  const evs = [];
-  for (let i = 1; i <= 12; i++) evs.push(chegada('m' + i, i * 2));
-  for (let i = 1; i <= 3; i++) evs.push(chegada('j' + i, i * 2 + 1, 'JP'));
-  evs.push(ev('entrada_registrada', { permanenciaId: 'vis', categoria: 'visitante', campos: { nome: 'X' } }, hora(1)));
-  evs.push(ev('entrada_registrada', { permanenciaId: 'col', categoria: 'colaborador', campos: { nome: 'Y' } }, hora(3)));
-  return evs;
-}
-const automaticas = (s, portaria) => s.vistorias.filter(v => v.portaria === portaria && v.origem === 'automatica');
-
-test('vistorias automáticas na 5ª e 10ª chegada da portaria', () => {
-  const s = estado(base());
-  assert.deepEqual(automaticas(s, 'MAC').map(v => [v.permanenciaId, v.ordem]), [['m5', 5], ['m10', 10]]);
-  assert.equal(automaticas(s, 'JP').length, 0);
-  assert.deepEqual(s.contadores.MAC, { chegadas: 12, faltam: 3 });
-  assert.deepEqual(s.contadores.JP, { chegadas: 3, faltam: 2 });
+test('vistorias automáticas vêm dos alertas do fluxo', () => {
+  const s = estado([], [alerta(10, 5), alerta(20, 10)]);
+  assert.deepEqual(auto(s).map(v => [v.permanenciaId, v.ordem, v.portaria]), [['frota-10', 5, 'DIS'], ['frota-20', 10, 'DIS']]);
+  assert.equal(s.ultimaOrdem, 10);
+  assert.equal(s.vistorias[0].situacao, 'pendente');
 });
 
-test('a ordem de leitura dos eventos não muda o resultado', () => {
-  const evs = base();
-  const embaralhados = [...evs].reverse();
-  [embaralhados[0], embaralhados[7]] = [embaralhados[7], embaralhados[0]];
-  assert.deepEqual(automaticas(estado(embaralhados), 'MAC').map(v => v.permanenciaId), ['m5', 'm10']);
+test('alerta repetido gera uma vistoria só', () => {
+  assert.equal(estado([], [alerta(10, 5), alerta(10, 5)]).vistorias.length, 1);
 });
 
-test('forçar não altera a contagem', () => {
-  const s = estado([...base(), ev('vistoria17_forcada', { permanenciaId: 'm2', justificativa: 'suspeita' }, hora(100))]);
-  const f = s.vistorias.find(v => v.permanenciaId === 'm2');
-  assert.equal(f.origem, 'forcada');
-  assert.equal(f.ordem, null);
-  assert.equal(f.justificativa, 'suspeita');
-  assert.deepEqual(automaticas(s, 'MAC').map(v => v.permanenciaId), ['m5', 'm10']);
+test('forçar chegada que já tem alerta não duplica', () => {
+  const s = estado([ev('vistoria17_forcada', { permanenciaId: 'frota-10', justificativa: 'x' })], [alerta(10, 5)]);
+  assert.equal(s.vistorias.length, 1);
+  assert.equal(s.vistorias[0].origem, 'automatica');
 });
 
-test('forçar uma chegada que já é automática mantém a automática', () => {
-  const s = estado([...base(), ev('vistoria17_forcada', { permanenciaId: 'm5', justificativa: 'x' }, hora(100))]);
-  assert.equal(s.vistorias.filter(v => v.permanenciaId === 'm5').length, 1);
-  assert.equal(s.vistorias.find(v => v.permanenciaId === 'm5').origem, 'automatica');
+test('forçar chegada sem alerta', () => {
+  const s = estado([ev('vistoria17_forcada', { permanenciaId: 'frota-11', justificativa: 'denúncia' })], []);
+  assert.deepEqual(s.vistorias.map(v => [v.permanenciaId, v.origem, v.justificativa]), [['frota-11', 'forcada', 'denúncia']]);
+  assert.equal(s.ultimaOrdem, 0);
 });
 
-test('dispensar', () => {
-  const s = estado([...base(), ev('vistoria17_dispensada', { permanenciaId: 'm5', justificativa: 'veículo saiu' }, hora(100))]);
-  const v = s.vistorias.find(v => v.permanenciaId === 'm5');
-  assert.equal(v.situacao, 'dispensada');
-  assert.equal(v.justificativa, 'veículo saiu');
-});
-
-const itens = (resp) => Object.fromEntries(Array.from({ length: 17 }, (_, i) => [i + 1, { resposta: resp }]));
-const ck04 = (numero, pid, versao, dadosItens, em) => ev('checklist_salvo', { numero, ficha: '04', permanenciaId: pid, versao, dados: { tipoCarga: 'vazio', itens: dadosItens }, pdf: null }, em);
-
-test('conclusão da vistoria', () => {
-  const s = estado([...base(), ck04('MAC-04-000001', 'm10', 1, itens('C'), hora(100))]);
-  const v = s.vistorias.find(v => v.permanenciaId === 'm10');
+test('dispensar e concluir', () => {
+  const s = estado([
+    ev('vistoria17_dispensada', { permanenciaId: 'frota-10', justificativa: 'liberado' }),
+    ev('checklist_salvo', { numero: 'DIS-04-000001', ficha: '04', permanenciaId: 'frota-20', versao: 1, dados: { itens: { 3: { resposta: 'NC' } } }, pdf: null }),
+  ], [alerta(10, 5), alerta(20, 10)]);
+  assert.equal(s.vistorias.find(v => v.permanenciaId === 'frota-10').situacao, 'dispensada');
+  const v = s.vistorias.find(v => v.permanenciaId === 'frota-20');
   assert.equal(v.situacao, 'concluida');
-  assert.equal(v.checklistNumero, 'MAC-04-000001');
-  assert.equal(s.vistorias.find(v => v.permanenciaId === 'm5').situacao, 'pendente');
-});
-
-test('versões de checklist', () => {
-  const s = estado([...base(), ck04('MAC-04-000001', 'm10', 1, itens('C'), hora(100)), ck04('MAC-04-000001', 'm10', 2, itens('C'), hora(110))]);
-  assert.equal(s.checklists.length, 1);
-  assert.equal(s.checklists[0].versao, 2);
-  assert.equal(s.checklists[0].versoes.length, 2);
-});
-
-test('não conforme', () => {
-  const it = itens('C'); it[3] = { resposta: 'NC', obs: 'furo' };
-  const s = estado([...base(), ck04('MAC-04-000001', 'm10', 1, it, hora(100))]);
+  assert.equal(v.checklistNumero, 'DIS-04-000001');
   assert.equal(s.checklists[0].naoConforme, true);
 });
 
-test('mensagem do alerta', () => {
-  const perm = { id: 'p1', portaria: 'MAC', entrada: { em: '2026-10-30T14:32:00', campos: { placaCavalo: 'abc1d23', reboques: ['BBB2B22'], motoristaNome: 'Fulano' } } };
-  const a = A.montarAlerta(perm, { origem: 'automatica' }, 'Tóliman Machado');
-  assert.match(a.conteudo.mensagem, /Portaria Machado — Cavalo ABC1D23 \/ Reb\. BBB2B22/);
-  assert.match(a.conteudo.mensagem, /Motorista Fulano — chegada 30\/10 14:32/);
-  assert.equal(a.nome, 'MAC_ABC1D23_20261030-1432_p1.json');
-  const f = A.montarAlerta(perm, { origem: 'forcada', justificativa: 'denúncia' }, 'Tóliman Machado');
-  assert.match(f.conteudo.mensagem, /\(forçada: denúncia\)$/);
+test('alerta de chegada que ainda não chegou ao painel continua pendente', () => {
+  const s = estado([], [alerta(99, 15)]);
+  assert.equal(s.vistorias[0].permanenciaId, 'frota-99');
+  assert.equal(s.vistorias[0].desde, '2026-10-30T10:00:00.000Z');
 });

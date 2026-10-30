@@ -3,7 +3,9 @@
 (function (root) {
   'use strict';
 
-  const R = (typeof module !== 'undefined' && module.exports) ? require('./regras.js') : root.Regras;
+  const noNode = typeof module !== 'undefined' && module.exports;
+  const R = noNode ? require('./regras.js') : root.Regras;
+  const Listas = noNode ? require('./listas.js') : root.Listas;
   const placa = R.normalizarPlaca;
 
   // Data local AAAA-MM-DD de um instante ISO.
@@ -13,7 +15,7 @@
   }
 
   function chaveColaborador(campos) {
-    return campos.funcionarioId || ('nome:' + String(campos.nome || '').trim().toLowerCase());
+    return campos.funcionarioId || ('nome:' + String(campos.nome || '').trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase());
   }
 
   function ordenar(eventos) {
@@ -22,13 +24,15 @@
     return [...porId.values()].sort((a, b) => (a.em < b.em ? -1 : a.em > b.em ? 1 : a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   }
 
-  function montarEstado(eventos, agora) {
+  // fontes: itens do Lists (cópias gravadas pelo fluxo) e alertas do 5º veículo (ADR 0003).
+  function montarEstado(eventos, agora, fontes = {}) {
     const evs = ordenar(eventos);
     let admin = null;
     const pessoas = new Map();
     const veiculos = new Map();
     const funcionarios = new Map();
     const perm = new Map();
+    const ocultos = new Map();
 
     const permanencia = (id, e) => {
       if (!perm.has(id)) perm.set(id, { id, portaria: e.portaria, categoria: null, entrada: null, saida: null, avulsa: false, retorno: false, foraDoCadastro: [], historico: [] });
@@ -57,6 +61,7 @@
           if (!p.saida) p.saida = { em: e.em, pessoa: e.pessoa, campos: { ...(d.campos || {}) } };
           break;
         }
+        case 'registro_ocultado': ocultos.set(d.permanenciaId, { motivo: d.motivo || '', pessoa: e.pessoa, em: e.em }); break;
         case 'registro_corrigido': {
           const p = perm.get(d.permanenciaId);
           if (!p) break;
@@ -68,7 +73,10 @@
       }
     }
 
+    for (const p of Listas.permanencias(fontes.itens || [])) perm.set(p.id, p);
     const permanencias = [...perm.values()];
+    for (const p of permanencias) if (ocultos.has(p.id)) p.oculto = ocultos.get(p.id);
+    const visiveis = permanencias.filter(p => !p.oculto);
     const temCadastro = veiculos.size > 0 || funcionarios.size > 0;
     for (const p of permanencias) {
       if (!temCadastro || !p.entrada) continue;
@@ -84,7 +92,7 @@
 
     // Colaboradores: retorno depois de saída por intervalo no mesmo dia.
     const instante = (p) => (p.entrada ? p.entrada.em : p.saida.em);
-    const colaboradores = permanencias.filter(p => p.categoria === 'colaborador' && (p.entrada || p.saida))
+    const colaboradores = visiveis.filter(p => p.categoria === 'colaborador' && (p.entrada || p.saida))
       .sort((a, b) => (instante(a) < instante(b) ? -1 : 1));
     const anterior = new Map();
     for (const p of colaboradores) {
@@ -145,19 +153,19 @@
     }
     const checklists = [...ck.values()].sort((a, b) => (a.em < b.em ? 1 : -1));
 
-    // Vistorias 17 pontos: derivadas das chegadas da frota de cada portaria (ADR 0002).
+    // Vistorias 17 pontos: as automáticas vêm dos alertas gravados pelo fluxo (ADR 0003).
     const vistorias = [];
-    const contadores = {};
     const porPerm = new Map();
-    const chegadas = permanencias.filter(p => p.categoria === 'frota' && p.entrada)
-      .sort((a, b) => (a.entrada.em < b.entrada.em ? -1 : a.entrada.em > b.entrada.em ? 1 : a.id < b.id ? -1 : 1));
-    for (const p of chegadas) {
-      const c = contadores[p.portaria] || (contadores[p.portaria] = { chegadas: 0, faltam: R.A_CADA });
-      c.chegadas++; c.faltam = R.faltamParaVistoria(c.chegadas);
-      if (R.indicesVistoria(c.chegadas)) {
-        const v = { permanenciaId: p.id, portaria: p.portaria, origem: 'automatica', ordem: c.chegadas, situacao: 'pendente', justificativa: null, checklistNumero: null, desde: p.entrada.em };
-        vistorias.push(v); porPerm.set(p.id, v);
-      }
+    let ultimaOrdem = 0;
+    for (const a of fontes.alertas || []) {
+      if (!a || a.id == null) continue;
+      const pid = 'frota-' + a.id;
+      if (porPerm.has(pid)) continue;
+      const p = perm.get(pid);
+      const v = { permanenciaId: pid, portaria: (p && p.portaria) || 'DIS', origem: 'automatica', ordem: a.ordem || null, situacao: 'pendente', justificativa: null, checklistNumero: null,
+        desde: p && p.entrada ? p.entrada.em : a.chegada, alerta: a };
+      vistorias.push(v); porPerm.set(pid, v);
+      if ((a.ordem || 0) > ultimaOrdem) ultimaOrdem = a.ordem;
     }
     for (const e of evs) {
       const d = e.dados || {};
@@ -179,14 +187,14 @@
       }
     }
 
-    const noLocal = (portaria) => permanencias.filter(p => p.entrada && !p.saida && p.portaria === portaria);
+    const noLocal = (portaria) => visiveis.filter(p => p.entrada && !p.saida && p.portaria === portaria);
 
     return {
       agora, admin,
       pessoas: [...pessoas.values()].sort((a, b) => a.nome.localeCompare(b.nome)),
       veiculos, funcionarios, permanencias,
       noLocal, jornadas, emIntervalo,
-      checklists, vistorias, contadores,
+      checklists, vistorias, ultimaOrdem,
       eventos: evs,
     };
   }

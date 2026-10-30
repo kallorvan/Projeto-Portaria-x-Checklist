@@ -97,3 +97,13 @@ test('jornada do dia com intervalo e retorno', () => {
   assert.deepEqual(estado([...manha, tarde[0]]).emIntervalo('MAC', '2026-10-30'), []);
   assert.deepEqual(s.emIntervalo('MAC', '2026-10-30'), []);
 });
+
+test('permanências do Lists e registro ocultado', () => {
+  const itens = require('./fixtures/listas/frota-dis.json').slice(0, 1);
+  const s1 = E.montarEstado([], new Date('2026-10-30T18:00'), { itens, alertas: [] });
+  assert.equal(s1.noLocal('DIS').length, 1);
+  assert.equal(s1.noLocal('DIS')[0].origem, 'lists');
+  const s2 = E.montarEstado([ev('registro_ocultado', { permanenciaId: 'frota-101', motivo: 'teste' }, '2026-10-30T18:00:00', 'DIS')], new Date('2026-10-30T18:00'), { itens, alertas: [] });
+  assert.equal(s2.noLocal('DIS').length, 0);
+  assert.equal(s2.permanencias.find(p => p.id === 'frota-101').oculto.motivo, 'teste');
+});

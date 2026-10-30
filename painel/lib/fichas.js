@@ -4,10 +4,10 @@
 (function (root) {
   'use strict';
 
+  // Frota e vistorias só na Distrito; a Machado registra apenas pessoas (ADR 0003).
   const PORTARIAS = [
-    { id: 'MAC', nome: 'Tóliman Machado', pasta: 'Machado' },
-    { id: 'JP', nome: 'Tóliman João Pessoa', pasta: 'JoaoPessoa' },
-    { id: 'DIS', nome: 'Tóliman Distrito', pasta: 'Distrito' },
+    { id: 'DIS', nome: 'Tóliman Distrito', pasta: 'Distrito', frota: true },
+    { id: 'MAC', nome: 'Tóliman Machado', pasta: 'Machado', frota: false },
   ];
 
   const CODIGOS_AVARIA = [
