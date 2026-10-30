@@ -264,7 +264,7 @@
   });
 
   $('#trocar-pessoa').addEventListener('click', () => { st.pessoa = null; LS('pessoa', null); entrarOuPerguntar(); });
-  $('#vista').addEventListener('change', (e) => { st.vista = e.target.value; recarregar(); });
+  $('#vista').addEventListener('change', (e) => { st.vista = e.target.value; render(); });
 
   // Formulário de senha do administrador dentro de uma aba; chama depois() ao desbloquear.
   function pedirSenhaAdmin(alvo, depois) {

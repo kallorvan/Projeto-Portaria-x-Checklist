@@ -1,52 +1,72 @@
-// Aba Início: indicadores da portaria, vistorias pendentes e avisos.
+// Centro de controle: vistorias da Distrito, as duas portarias lado a lado e alertas de dados.
 (function () {
   'use strict';
   const P = window.Painel;
-  const { h, botao, st } = P;
+  const { h, st } = P;
+  const LISTAS = { frota: 'Frota', visitantes: 'Visitantes', colaboradores: 'Colaboradores' };
 
-  function kpi(rotulo, valor, sub, cls, aba, id) {
-    return h('button', { type: 'button', class: 'kpi ' + (cls || ''), id, onclick: aba ? () => P.trocarAba(aba) : null },
+  function kpi(id, rotulo, valor, sub, cls, aba, depois) {
+    return h('button', { type: 'button', class: 'kpi ' + (cls || ''), id, onclick: aba ? () => { if (depois) depois(); P.trocarAba(aba); } : null },
       h('div', { class: 'lab' }, rotulo), h('div', { class: 'val' }, String(valor)), h('div', { class: 'sub' + (cls === 'k-necessario' && valor ? ' alert' : '') }, sub || ''));
+  }
+
+  function blocoPortaria(por) {
+    const e = st.estado, info = P.portariaInfo(por), hoje = P.diaLocal();
+    const local = e.noLocal(por);
+    const conta = (cat) => local.filter(p => p.categoria === cat).length;
+    const doDia = (m) => m && Estado.diaDe(m.em) === hoje;
+    const movimentos = P.visiveis(p => p.portaria === por).reduce((n, p) => n + (doDia(p.entrada) ? 1 : 0) + (doDia(p.saida) ? 1 : 0), 0);
+    const ver = () => { st.vista = por; };
+    return h('div', { class: 'sec' },
+      h('div', { class: 'sec-h' }, h('h2', null, info.nome), h('span', { class: 'sec-note' }, info.frota ? 'Frota, pessoas e vistorias' : 'Pessoas')),
+      h('div', { class: 'kpis', style: 'margin-top:0' },
+        kpi(`ctl-${por}-vis`, 'Visitantes no local', conta('visitante'), 'agora', '', 'vis', ver),
+        kpi(`ctl-${por}-col`, 'Colaboradores no local', conta('colaborador'), 'agora', '', 'col', ver),
+        kpi(`ctl-${por}-intervalo`, 'Em intervalo', e.emIntervalo(por, hoje).length, 'saíram para o intervalo', '', 'col', ver),
+        info.frota ? kpi(`ctl-${por}-frota`, 'Frota no pátio', conta('frota'), 'chegadas sem saída', '', 'frota') : null,
+        kpi(`ctl-${por}-mov`, 'Movimentos hoje', movimentos, 'entradas e saídas', '', null)));
+  }
+
+  function alertasDeDados() {
+    const hoje = P.diaLocal(), r = [];
+    const avulsas = P.visiveis(p => p.avulsa && p.saida && Estado.diaDe(p.saida.em) === hoje);
+    if (avulsas.length) r.push(`Saída sem entrada hoje: ${avulsas.map(p => `${P.identificacao(p)} (${P.portariaInfo(p.portaria).pasta} ${P.hora(p.saida.em)})`).join(', ')}.`);
+    const longas = P.visiveis(p => p.entrada && !p.saida && p.categoria !== 'frota' && Date.now() - new Date(p.entrada.em) > 12 * 3600000);
+    if (longas.length) r.push(`No local há mais de 12 h (provável saída não registrada): ${longas.map(p => `${P.identificacao(p)} (${P.portariaInfo(p.portaria).pasta})`).join(', ')}.`);
+    // Atraso das cópias: lista sem arquivo novo há mais de 24 h (só listas que já enviaram algo).
+    const ultimo = new Map();
+    for (const it of st.fontes.itens) {
+      const k = `${it.portaria}|${it.lista}`;
+      if (!ultimo.has(k) || it.modificado > ultimo.get(k)) ultimo.set(k, it.modificado);
+    }
+    for (const [k, m] of ultimo) if (Date.now() - new Date(m) > 24 * 3600000) {
+      const [por, lista] = k.split('|');
+      r.push(`A lista ${LISTAS[lista] || lista} da ${P.portariaInfo(por).nome} não envia registros desde ${P.dataHora(m)}. Confira o fluxo no Power Automate.`);
+    }
+    return r;
   }
 
   P.telas.ini = {
     render(alvo) {
-      const e = st.estado, por = P.portariaVista(), hoje = P.diaLocal();
-      const local = e.noLocal(por);
-      const conta = (f) => local.filter(f).length;
-      const vis = conta(p => p.categoria === 'visitante' || p.categoria === 'prestador');
-      const frota = conta(p => p.categoria === 'frota');
-      const col = conta(p => p.categoria === 'colaborador');
-      const intervalo = e.emIntervalo(por, hoje).length;
-      const entradasHoje = e.permanencias.filter(p => p.portaria === por && p.entrada && Estado.diaDe(p.entrada.em) === hoje).length;
-      const crachas = e.permanencias.filter(p => p.portaria === por && (p.categoria === 'visitante' || p.categoria === 'prestador') && p.entrada && p.entrada.campos.cracha &&
-        ((p.saida && p.saida.campos.crachaDevolvido === false) || (!p.saida && Date.now() - new Date(p.entrada.em) > 12 * 3600000)));
-      const pend = e.vistorias.filter(v => v.situacao === 'pendente' && v.portaria === por);
-      const cont = (e.contadores || {})[por] || { chegadas: 0, faltam: Regras.A_CADA };
-      const sem03 = local.filter(p => p.categoria === 'frota' && !e.checklists.some(c => c.ficha === '03' && c.permanenciaId === p.id));
-      const fotos = st.fotosEntrada.filter(f => Fotos.ehImagem(f.nome));
-      const esquecidas = Fotos.esquecidas(fotos, new Date());
-
-      const avisos = [];
-      if (pend.length) avisos.push(h('div', { class: 'destaque' }, `${pend.length} vistoria(s) 17 pontos pendente(s)`, h('small', null, pend.map(v => { const p = e.permanencias.find(x => x.id === v.permanenciaId); return `${p.entrada.campos.placaCavalo} (há ${P.duracao(v.desde)})`; }).join(' · ')),
-        h('div', { style: 'margin-top:10px;position:relative;z-index:1' }, botao('Abrir fila do GR', 'btn ghost', () => P.trocarAba('ck')))));
-      if (sem03.length) avisos.push(h('p', { class: 'msg info' }, `Checklist 03 não preenchido: ${sem03.map(p => p.entrada.campos.placaCavalo).join(', ')}. `, botao('Ir para Frota', 'linkbtn', () => P.trocarAba('frota'))));
-      if (P.temPapel('admin') && esquecidas.length) avisos.push(h('p', { class: 'msg err' }, `${esquecidas.length} foto(s) há mais de ${Fotos.DIAS_ESQUECIDA} dias na pasta fotos-entrada/${P.portariaInfo(por).pasta} sem vínculo. Vincule ou apague pelo OneDrive.`));
-      const foraCad = e.permanencias.filter(p => p.foraDoCadastro.length).length;
-      if (P.temPapel('admin') && foraCad) avisos.push(h('p', { class: 'msg info' }, `${foraCad} registro(s) com placa ou pessoa fora do cadastro. `, botao('Ver em Cadastros', 'linkbtn', () => P.trocarAba('cad'))));
-
+      const e = st.estado;
+      const chegadas03 = e.noLocal('DIS').filter(p => p.categoria === 'frota' && !e.checklists.some(c => c.ficha === '03' && c.permanenciaId === p.id));
+      const pend = e.vistorias.filter(v => v.situacao === 'pendente');
+      const nc = e.checklists.filter(c => c.naoConforme && Date.now() - new Date(c.em) < 7 * 86400000);
+      const maisAntiga = (lista) => P.duracao(lista.sort()[0]);
+      const dados = alertasDeDados();
       alvo.replaceChildren(
-        h('div', { class: 'sec' }, h('div', { class: 'sec-h' }, h('h2', null, `No local agora · ${P.portariaInfo(por).nome}`), h('span', { class: 'sec-note' }, `Atualizado às ${P.hora(new Date())}`))),
-        h('div', { class: 'kpis', style: 'margin-top:0' },
-          kpi('Visitantes e prestadores', vis, 'no local agora', '', 'vis', 'kpi-vis'),
-          kpi('Frota', frota, 'no local agora', '', 'frota', 'kpi-frota'),
-          kpi('Colaboradores', col, intervalo ? `${intervalo} em intervalo` : 'no local agora', '', 'col', 'kpi-col'),
-          kpi('Entradas hoje', entradasHoje, 'todas as categorias', '', null, 'kpi-hoje'),
-          kpi('Crachás não devolvidos', crachas.length, crachas.length ? crachas.map(p => p.entrada.campos.cracha).join(', ') : 'tudo em ordem', crachas.length ? 'k-necessario' : '', 'vis', 'kpi-cracha'),
-          kpi('Vistorias 17 pontos pendentes', pend.length, `próxima em ${cont.faltam} chegada(s)`, pend.length ? 'k-necessario' : '', 'ck', 'kpi-17'),
-          kpi('Fotos aguardando vínculo', fotos.length, `pasta fotos-entrada/${P.portariaInfo(por).pasta}`, '', null, 'kpi-fotos'),
-        ),
-        avisos.length ? h('div', { class: 'sec', style: 'display:grid;gap:10px' }, avisos) : null,
+        h('div', { class: 'sec' },
+          h('div', { class: 'sec-h' }, h('h2', null, 'Vistorias · Distrito'), h('span', { class: 'sec-note' }, `Atualizado às ${P.hora(new Date())}`)),
+          h('div', { class: 'kpis', style: 'margin-top:0' },
+            kpi('ctl-03', 'Aguardando checklist 03', chegadas03.length, chegadas03.length ? `mais antiga há ${maisAntiga(chegadas03.map(p => p.entrada.em))}` : 'em dia', chegadas03.length ? 'k-necessario' : '', 'ck'),
+            kpi('ctl-17', 'Vistorias 17 pontos pendentes', pend.length, pend.length ? `mais antiga há ${maisAntiga(pend.map(v => v.desde))}` : 'em dia', pend.length ? 'k-necessario' : '', 'ck'),
+            kpi('ctl-nc', 'Não conformidades', nc.length, 'últimos 7 dias', nc.length ? 'k-necessario' : '', 'ck'),
+            kpi('ctl-ordem', 'Última vistoria do fluxo', e.ultimaOrdem ? `${e.ultimaOrdem}ª` : '—', 'chegada da contagem', '', null))),
+        blocoPortaria('DIS'),
+        blocoPortaria('MAC'),
+        h('div', { class: 'sec', id: 'ctl-dados', style: 'display:grid;gap:10px' },
+          h('div', { class: 'sec-h', style: 'margin:0' }, h('h2', null, 'Alertas de dados')),
+          dados.length ? dados.map(t => h('p', { class: 'msg info', style: 'margin:0' }, t)) : h('p', { class: 'sec-note', style: 'margin:0' }, 'Nenhuma inconsistência nos registros de hoje.')),
       );
     },
   };
