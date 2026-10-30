@@ -32,3 +32,10 @@ const gravar = (page, tipo, portaria, dados) => page.evaluate(([t, p, d]) => win
 const estado = (page, fn) => page.evaluate(fn);
 
 module.exports = { abrir, primeiroAcesso, gravar, estado, assert };
+
+// Desbloqueia a área do administrador na aba aberta.
+async function desbloquear(page, senha = '1234') {
+  await page.fill('#senha-adm', senha);
+  await page.click('#senha-form button[type=submit]');
+}
+module.exports.desbloquear = desbloquear;
