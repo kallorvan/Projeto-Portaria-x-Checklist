@@ -1,0 +1,8 @@
+{
+  "name": "portaria-toliman",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/*.test.cjs",
+    "e2e": "node tests/e2e/rodar.cjs"
+  }
+}
