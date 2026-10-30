@@ -18,15 +18,15 @@
 
   function fila03() {
     const pode = P.podeVistoriar();
-    const lista = st.estado.noLocal('DIS').filter(p => p.categoria === 'frota' && !st.estado.checklists.some(c => c.ficha === '03' && c.permanenciaId === p.id))
-      .sort((a, b) => (a.entrada.em < b.entrada.em ? -1 : 1));
+    const lista = P.aguardando03();
     return h('div', { class: 'sec' },
-      h('div', { class: 'sec-h' }, h('h2', null, `Aguardando checklist 03 (${lista.length})`), h('span', { class: 'sec-note' }, 'Toda chegada da frota na Distrito, da mais antiga para a mais nova.')),
+      h('div', { class: 'sec-h' }, h('h2', null, `Aguardando checklist 03 (${lista.length})`), h('span', { class: 'sec-note' }, 'Toda chegada da frota na Distrito sem checklist 03, inclusive as que já saíram, da mais antiga para a mais nova.')),
       h('div', { class: 'tbl-scroll' }, h('table', { id: 'fila-03' }, h('thead', null, h('tr', null, ['Cavalo', 'Reboques', 'Motorista', 'Chegada', 'Esperando há', ''].map(t => h('th', null, t)))),
         h('tbody', null, lista.length ? lista.map(p => {
           const c = p.entrada.campos;
           return h('tr', null, h('td', { class: 'nm' }, c.placaCavalo), h('td', { class: 'nm' }, (c.reboques || []).join(' / ')), h('td', null, c.motoristaNome || ''),
-            h('td', { class: 'num' }, P.dataHora(p.entrada.em)), h('td', null, h('span', { class: 'tag warn' }, P.duracao(p.entrada.em))),
+            h('td', { class: 'num' }, P.dataHora(p.entrada.em)),
+            h('td', null, h('span', { class: 'tag warn' }, P.duracao(p.entrada.em)), p.saida ? [' ', h('span', { class: 'tag' }, `já saiu ${P.dataHora(p.saida.em)}`)] : null),
             h('td', null, pode ? botao('Fazer checklist 03', 'send', () => P.abrirChecklist03(p.id)) : null, ' ', P.linkLists(p)));
         }) : h('tr', null, h('td', { colspan: 6, class: 'sec-note' }, 'Nenhuma chegada aguardando o checklist 03.'))))));
   }

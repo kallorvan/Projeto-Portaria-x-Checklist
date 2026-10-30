@@ -49,7 +49,7 @@
   P.telas.ini = {
     render(alvo) {
       const e = st.estado;
-      const chegadas03 = e.noLocal('DIS').filter(p => p.categoria === 'frota' && !e.checklists.some(c => c.ficha === '03' && c.permanenciaId === p.id));
+      const chegadas03 = P.aguardando03();
       const pend = e.vistorias.filter(v => v.situacao === 'pendente');
       const nc = e.checklists.filter(c => c.naoConforme && Date.now() - new Date(c.em) < 7 * 86400000);
       const maisAntiga = (lista) => P.duracao(lista.sort()[0]);

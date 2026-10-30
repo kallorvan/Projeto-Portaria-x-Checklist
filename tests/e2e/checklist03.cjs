@@ -40,6 +40,13 @@ module.exports = async () => {
     await page.click('#ck03-concluir');
     await page.waitForFunction(() => window.__painel.st.estado.checklists.length === 2);
     assert.equal(await page.evaluate(() => window.__painel.st.estado.checklists[0].numero), 'DIS-03-000002');
+    // chegada que já saiu sem checklist 03 continua na fila, marcada como "já saiu"
+    await espelho(page, { lista: 'frota', id: 13, campos: chegadaFrota('DDD4D44') });
+    await espelho(page, { lista: 'frota', id: 14, campos: { ...chegadaFrota('DDD4D44'), Situacao: 'Saída' } });
+    await page.click('#tab-ck');
+    assert.match(await page.textContent('#fila-03 tr:has-text("DDD4D44")'), /já saiu/);
+    await page.click('#tab-ini');
+    assert.equal(await page.textContent('#ctl-03 .val'), '1');
     assert.deepEqual(page.erros, []);
   } finally { await browser.close(); }
 };

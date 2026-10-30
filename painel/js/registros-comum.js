@@ -104,10 +104,14 @@
     { titulo: 'Link no Lists', valor: p => p.link || '' },
   ];
 
+  // Chegadas da frota (Distrito) sem checklist 03, inclusive as que já saíram: a pendência não some com a saída.
+  const aguardando03 = () => visiveis(p => p.portaria === 'DIS' && p.categoria === 'frota' && p.entrada
+    && !st.estado.checklists.some(c => c.ficha === '03' && c.permanenciaId === p.id)).sort((a, b) => (a.entrada.em < b.entrada.em ? -1 : 1));
+
   const seletorNota = () => h('p', { class: 'sec-note', style: 'margin:0' }, `Portaria ${P.portariaInfo(st.vista).nome}. Troque no seletor do topo.`);
 
   Object.assign(P, {
     CATEGORIAS, MOTIVOS, nomeMotivo, camposDe, identificacao, linkLists, detalhe, ocultar, tabela, baixar, blocoHistorico,
-    entradaCol, saidaCol, noLocalCol, porCol, csvComum, visiveis, instante, seletorNota,
+    entradaCol, saidaCol, noLocalCol, porCol, csvComum, visiveis, instante, seletorNota, aguardando03,
   });
 })();
