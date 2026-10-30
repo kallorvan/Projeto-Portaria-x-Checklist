@@ -1,4 +1,4 @@
-// Núcleo do painel: conexão com a pasta, eventos, pessoa e portaria do computador,
+// Núcleo do centro de controle: conexão com a pasta, eventos, cópias do Lists e alertas do fluxo, pessoa,
 // abas, presença e utilitários de interface usados pelas telas (js/tela-*.js).
 (function () {
   'use strict';
@@ -8,7 +8,8 @@
   const LS = (k, v) => { try { if (v === undefined) return localStorage.getItem('portaria.' + k); if (v === null) localStorage.removeItem('portaria.' + k); else localStorage.setItem('portaria.' + k, v); } catch { return null; } };
 
   const st = {
-    demo: DEMO, estado: null, pessoa: LS('pessoa'), portaria: LS('portaria'), vista: null,
+    // portaria: onde as vistorias acontecem (frota só na Distrito); vista: portaria exibida nas abas de pessoas.
+    demo: DEMO, estado: null, pessoa: LS('pessoa'), portaria: 'DIS', vista: 'DIS', fontes: { itens: [], alertas: [] },
     pc: LS('pc') || (() => { const id = novoId(); LS('pc', id); return id; })(),
     adminOk: false, aba: 'ini', presenca: [], ultimaLeitura: null, erro: null, fotosEntrada: [],
   };
@@ -31,6 +32,8 @@
   }
   const portariaInfo = (id) => Fichas.PORTARIAS.find(p => p.id === id) || { id, nome: id, pasta: id };
   const temPapel = (papel, nome = st.pessoa) => !!(st.estado && st.estado.pessoas.find(p => p.nome === nome && p.papeis.includes(papel)));
+  // GR e coordenador têm as mesmas permissões nas vistorias (spec v2 §6).
+  const podeVistoriar = () => temPapel('gr') || temPapel('coordenador');
 
   // Construtor de elementos: h('div', { class: 'x', onclick }, filho, 'texto', [filhos]).
   function h(tag, props, ...filhos) {
@@ -172,14 +175,17 @@
   }
 
   async function recarregar() {
-    try { await A.lerEventos(); st.erro = null; st.ultimaLeitura = new Date(); }
-    catch (e) { st.erro = 'Falha ao ler a pasta: ' + e.message; }
-    try { st.fotosEntrada = await A.listar(['fotos-entrada', portariaInfo(st.vista || st.portaria).pasta]); } catch { st.fotosEntrada = []; }
+    try {
+      await A.lerEventos();
+      st.fontes = { itens: await A.lerJsonDe('listas'), alertas: await A.lerJsonDe('alertas') };
+      st.erro = null; st.ultimaLeitura = new Date();
+    } catch (e) { st.erro = 'Falha ao ler a pasta: ' + e.message; }
+    try { st.fotosEntrada = await A.listar(['fotos-entrada', portariaInfo(st.portaria).pasta]); } catch { st.fotosEntrada = []; }
     reconstruir();
   }
 
   function reconstruir() {
-    st.estado = Estado.montarEstado(A.eventos(), new Date());
+    st.estado = Estado.montarEstado(A.eventos(), new Date(), st.fontes);
     render();
   }
 
@@ -201,7 +207,7 @@
   async function presenca() {
     if (!st.pessoa) return;
     try {
-      await A.gravarArquivo(['presenca'], `${slug(st.pessoa)}__${st.pc}.json`, JSON.stringify({ pessoa: st.pessoa, pc: st.pc, portaria: st.portaria, em: new Date().toISOString() }));
+      await A.gravarArquivo(['presenca'], `${slug(st.pessoa)}__${st.pc}.json`, JSON.stringify({ pessoa: st.pessoa, pc: st.pc, em: new Date().toISOString() }));
       const lista = [];
       for (const f of await A.listar(['presenca'])) {
         try { lista.push(JSON.parse(await (await f.handle.getFile()).text())); } catch {}
@@ -224,13 +230,8 @@
   function entrarOuPerguntar() {
     const q = $('#quem');
     const e = st.estado;
-    $('#adm-novo').hidden = $('#portaria-escolha').hidden = $('#pessoa-escolha').hidden = true;
+    $('#adm-novo').hidden = $('#pessoa-escolha').hidden = true;
     if (!e.admin) { esconderApp(); q.hidden = false; $('#adm-novo').hidden = false; return; }
-    if (!st.portaria || !Fichas.PORTARIAS.some(p => p.id === st.portaria)) {
-      esconderApp(); q.hidden = false; $('#portaria-escolha').hidden = false;
-      $('#portaria-lista').replaceChildren(...Fichas.PORTARIAS.map(p => botao(p.nome, 'chip', () => { st.portaria = p.id; LS('portaria', p.id); entrarOuPerguntar(); })));
-      return;
-    }
     if (!st.pessoa || !e.pessoas.some(p => p.nome === st.pessoa)) {
       esconderApp(); q.hidden = false; $('#pessoa-escolha').hidden = false;
       $('#quem-lista').replaceChildren(...e.pessoas.map(p => botao(p.nome, 'chip', () => definirPessoa(p.nome))));
@@ -242,7 +243,6 @@
 
   function definirPessoa(nome) {
     st.pessoa = nome; LS('pessoa', nome); st.adminOk = false;
-    st.vista = st.portaria;
     entrarOuPerguntar();
     presenca();
   }
@@ -257,7 +257,7 @@
     st.pessoa = nome;
     const ok = await acao(async () => {
       await gravar('admin_definido', null, { salt, hash: await hashSenha(s1, salt) });
-      await gravar('pessoa_adicionada', null, { nome, papeis: ['admin', 'porteiro'] });
+      await gravar('pessoa_adicionada', null, { nome, papeis: ['admin', 'gr'] });
     }, 'Administrador criado.');
     st.pessoa = LS('pessoa');
     if (ok) { st.adminOk = true; entrarOuPerguntar(); }
@@ -279,7 +279,8 @@
   }
 
   /* ---------- abas ---------- */
-  const ABAS = { ini: 'v-ini', vis: 'v-vis', frota: 'v-frota', col: 'v-col', ck: 'v-ck', cad: 'v-cad', pes: 'v-pes' };
+  const ABAS = { ini: 'v-ini', ck: 'v-ck', frota: 'v-frota', vis: 'v-vis', col: 'v-col', pes: 'v-pes' };
+  const ABAS_COM_PORTARIA = ['vis', 'col'];
   const telas = {};
   for (const id of Object.keys(ABAS)) $('#tab-' + id).addEventListener('click', () => trocarAba(id));
 
@@ -287,25 +288,20 @@
 
   function mostrarApp() {
     $('#tabs').hidden = false; $('#eu-wrap').hidden = false; $('#rodape').hidden = false;
-    st.vista = st.vista || st.portaria;
     render();
   }
 
   function renderTopo() {
-    const p = portariaInfo(st.vista || st.portaria);
-    $('#titulo').textContent = st.portaria ? p.nome : 'Portaria Tóliman';
+    $('#titulo').textContent = 'Centro de controle';
     $('#eu-nome').textContent = st.pessoa || '';
-    const gr = temPapel('gr');
-    $('#vista-wrap').hidden = !gr || $('#tabs').hidden;
-    if (gr) {
-      const v = $('#vista');
-      if (!v.options.length) Fichas.PORTARIAS.forEach(x => v.append(h('option', { value: x.id }, x.nome)));
-      v.value = st.vista || st.portaria;
-    }
+    $('#vista-wrap').hidden = $('#tabs').hidden || !ABAS_COM_PORTARIA.includes(st.aba);
+    const v = $('#vista');
+    if (!v.options.length) Fichas.PORTARIAS.forEach(x => v.append(h('option', { value: x.id }, x.nome)));
+    v.value = st.vista;
     const s = $('#sync');
     s.className = 'sync ' + (st.erro ? 'err' : st.demo ? 'local' : 'on');
     $('#sync-t').textContent = st.erro || (st.demo ? 'Modo demonstração (dados só neste navegador)' : `Pasta "${A.nomePasta()}"${st.ultimaLeitura ? ' · lida às ' + hora(st.ultimaLeitura) : ''}`);
-    const pres = st.presenca.map(x => h('b', null, `${x.pessoa} (${portariaInfo(x.portaria).pasta})`));
+    const pres = st.presenca.map(x => h('b', null, x.pessoa));
     $('#pres').replaceChildren(...(pres.length ? [h('span', null, 'No painel agora:'), ...pres] : []));
   }
 
@@ -315,9 +311,9 @@
     if ($('#tabs').hidden) return;
     if (st.pessoa && !st.estado.pessoas.some(p => p.nome === st.pessoa)) return entrarOuPerguntar();
     const admin = temPapel('admin');
-    $('#tab-cad').hidden = $('#tab-pes').hidden = !admin;
-    if (!admin && (st.aba === 'cad' || st.aba === 'pes')) st.aba = 'ini';
-    const pend = st.estado.vistorias.filter(v => v.situacao === 'pendente' && (temPapel('gr') || v.portaria === st.portaria)).length;
+    $('#tab-pes').hidden = !admin;
+    if (!admin && st.aba === 'pes') st.aba = 'ini';
+    const pend = st.estado.vistorias.filter(v => v.situacao === 'pendente').length;
     $('#n-pend').textContent = pend ? String(pend) : '';
     for (const [id, sec] of Object.entries(ABAS)) {
       const ativa = id === st.aba;
@@ -339,7 +335,7 @@
 
   window.Painel = {
     st, telas, iniciar, gravar, acao, recarregar, render, trocarAba, aviso, dialogo, pedirTexto, listaErros,
-    h, botao, campo, inp, sel, seg, $, $$, slug, novoId, dataHora, hora, dataBR, diaLocal, duracao, portariaInfo, temPapel, LS,
+    h, botao, campo, inp, sel, seg, $, $$, slug, novoId, dataHora, hora, dataBR, diaLocal, duracao, portariaInfo, temPapel, podeVistoriar, LS,
   };
   window.__painel = { st, gravar, recarregar, Armazenamento: A };
 })();

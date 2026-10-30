@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Portaria Tóliman · Grupo Dínamo</title>
+<title>Centro de controle · Portaria Tóliman</title>
 <meta name="theme-color" content="#1C2543">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -11,6 +11,7 @@
 <script src="lib/logos.js"></script>
 <script src="lib/fichas.js"></script>
 <script src="lib/regras.js"></script>
+<script src="lib/listas.js"></script>
 <script src="lib/estado.js"></script>
 <script src="lib/alerta.js"></script>
 <script src="lib/csv.js"></script>
@@ -285,8 +286,8 @@ dialog.dlg::backdrop{background:rgba(28,37,67,.45)}
   <div class="top-in">
     <div class="brand"><img id="logo-dinamo" alt="Grupo Dínamo"><span class="sep"></span><img id="logo-toliman" alt="Tóliman"></div>
     <div class="titles">
-      <p class="eyebrow">Portaria · Checklist de veículos</p>
-      <h1 id="titulo">Portaria Tóliman</h1>
+      <p class="eyebrow">Portaria Tóliman · GR e coordenação</p>
+      <h1 id="titulo">Centro de controle</h1>
     </div>
     <div class="side">
       <div class="mes-wrap" id="vista-wrap" hidden><span class="dot"></span><label for="vista">Portaria</label><select id="vista" aria-label="Portaria exibida"></select></div>
@@ -296,12 +297,11 @@ dialog.dlg::backdrop{background:rgba(28,37,67,.45)}
     </div>
   </div>
   <nav class="tabs" role="tablist" id="tabs" hidden>
-    <button class="tab" role="tab" id="tab-ini" aria-controls="v-ini">Início</button>
-    <button class="tab" role="tab" id="tab-vis" aria-controls="v-vis">Visitantes e Prestadores</button>
+    <button class="tab" role="tab" id="tab-ini" aria-controls="v-ini">Centro de controle</button>
+    <button class="tab" role="tab" id="tab-ck" aria-controls="v-ck">Vistorias<span class="n" id="n-pend"></span></button>
     <button class="tab" role="tab" id="tab-frota" aria-controls="v-frota">Frota</button>
+    <button class="tab" role="tab" id="tab-vis" aria-controls="v-vis">Visitantes</button>
     <button class="tab" role="tab" id="tab-col" aria-controls="v-col">Colaboradores</button>
-    <button class="tab" role="tab" id="tab-ck" aria-controls="v-ck">Checklists<span class="n" id="n-pend"></span></button>
-    <button class="tab" role="tab" id="tab-cad" aria-controls="v-cad" hidden>Cadastros</button>
     <button class="tab" role="tab" id="tab-pes" aria-controls="v-pes" hidden>Pessoas</button>
   </nav>
 </header>
@@ -316,18 +316,13 @@ dialog.dlg::backdrop{background:rgba(28,37,67,.45)}
   <section id="quem" class="card empty sec" hidden>
     <div id="adm-novo" hidden style="display:grid;gap:10px;justify-items:center;width:100%">
       <div class="big">Primeiro acesso: crie o administrador</div>
-      <p>O painel ainda não tem administrador. Quem administra se cadastra aqui primeiro: só o administrador cadastra pessoas, veículos e funcionários, usando a senha criada agora.</p>
+      <p>O painel ainda não tem administrador. Quem administra se cadastra aqui primeiro: só o administrador cadastra as pessoas do painel, usando a senha criada agora.</p>
       <form class="addrow" id="adm-form">
         <input class="inp" id="adm-nome" placeholder="Seu nome" autocomplete="off" aria-label="Seu nome" maxlength="40">
         <input class="inp" id="adm-senha" type="password" placeholder="Crie a senha (mín. 4)" autocomplete="new-password" aria-label="Senha do administrador">
         <input class="inp" id="adm-senha2" type="password" placeholder="Repita a senha" autocomplete="new-password" aria-label="Repita a senha">
         <button class="btn" type="submit">Ser o administrador</button>
       </form>
-    </div>
-    <div id="portaria-escolha" hidden style="display:grid;gap:10px;justify-items:center;width:100%">
-      <div class="big">Em qual portaria fica este computador?</div>
-      <p>A escolha fica guardada neste computador. Todos os registros feitos aqui são dessa portaria.</p>
-      <div class="pessoas" id="portaria-lista"></div>
     </div>
     <div id="pessoa-escolha" hidden style="display:grid;gap:10px;justify-items:center;width:100%">
       <div class="big">Quem está usando este painel?</div>
@@ -342,10 +337,9 @@ dialog.dlg::backdrop{background:rgba(28,37,67,.45)}
   <section id="v-frota" role="tabpanel" hidden></section>
   <section id="v-col" role="tabpanel" hidden></section>
   <section id="v-ck" role="tabpanel" hidden></section>
-  <section id="v-cad" role="tabpanel" hidden></section>
   <section id="v-pes" role="tabpanel" hidden></section>
 
-  <footer id="rodape" hidden>Os dados ficam na pasta compartilhada do time no SharePoint: cada registro é um arquivo em <span class="num">eventos/</span>. Não edite nem apague esses arquivos. Alterações de outras portarias aparecem quando o OneDrive sincroniza.</footer>
+  <footer id="rodape" hidden>Os registros da portaria chegam do Microsoft Lists pelo Power Automate (pasta <span class="num">listas/</span>); vistorias e alertas ficam em <span class="num">eventos/</span> e <span class="num">alertas/</span>. Não edite nem apague esses arquivos.</footer>
 </main>
 
 <dialog class="dlg" id="dlg"></dialog>
@@ -355,7 +349,6 @@ dialog.dlg::backdrop{background:rgba(28,37,67,.45)}
 
 <script src="js/nucleo.js"></script>
 <script src="js/tela-pessoas.js"></script>
-<script src="js/tela-cadastros.js"></script>
 <script src="js/fotos-ui.js"></script>
 <script src="js/registros-comum.js"></script>
 <script src="js/tela-inicio.js"></script>

@@ -4,7 +4,7 @@
   const P = window.Painel;
   const { h, botao, inp, st } = P;
 
-  const PAPEIS = [['porteiro', 'Porteiro'], ['gr', 'GR'], ['admin', 'Administrador']];
+  const PAPEIS = [['gr', 'GR'], ['coordenador', 'Coordenador'], ['admin', 'Administrador']];
 
   function caixas(prefixo, marcados) {
     return h('div', { class: 'pessoas', style: 'justify-content:flex-start' }, PAPEIS.map(([id, nome]) =>
@@ -16,7 +16,7 @@
     admin: true,
     render(alvo) {
       const nome = inp({ id: 'pes-nome', placeholder: 'Nome da pessoa', maxlength: 40 });
-      const papeis = caixas('pes', ['porteiro']);
+      const papeis = caixas('pes', ['gr']);
       const form = h('form', { id: 'pes-form', class: 'form-card', onsubmit: async (ev) => {
         ev.preventDefault();
         const n = nome.value.trim(), ps = lidos(papeis);
@@ -44,7 +44,7 @@
       });
       alvo.replaceChildren(
         h('div', { class: 'sec card' }, form),
-        h('div', { class: 'sec' }, h('div', { class: 'sec-h' }, h('h2', null, 'Pessoas do painel'), h('span', { class: 'sec-note' }, 'Porteiro registra entradas, saídas e o REG LOG 03. GR faz e dispensa a vistoria 17 pontos. Administrador cuida dos cadastros.')),
+        h('div', { class: 'sec' }, h('div', { class: 'sec-h' }, h('h2', null, 'Pessoas do painel'), h('span', { class: 'sec-note' }, 'GR e coordenador acompanham as portarias e fazem, corrigem, forçam e dispensam as vistorias. Administrador cadastra as pessoas do painel.')),
           h('div', { class: 'tbl-scroll' }, h('table', null, h('thead', null, h('tr', null, h('th', null, 'Nome'), h('th', null, 'Papéis'), h('th', null, ''))), h('tbody', null, linhas)))),
       );
     },

@@ -22,7 +22,7 @@
       const crachas = e.permanencias.filter(p => p.portaria === por && (p.categoria === 'visitante' || p.categoria === 'prestador') && p.entrada && p.entrada.campos.cracha &&
         ((p.saida && p.saida.campos.crachaDevolvido === false) || (!p.saida && Date.now() - new Date(p.entrada.em) > 12 * 3600000)));
       const pend = e.vistorias.filter(v => v.situacao === 'pendente' && v.portaria === por);
-      const cont = e.contadores[por] || { chegadas: 0, faltam: Regras.A_CADA };
+      const cont = (e.contadores || {})[por] || { chegadas: 0, faltam: Regras.A_CADA };
       const sem03 = local.filter(p => p.categoria === 'frota' && !e.checklists.some(c => c.ficha === '03' && c.permanenciaId === p.id));
       const fotos = st.fotosEntrada.filter(f => Fotos.ehImagem(f.nome));
       const esquecidas = Fotos.esquecidas(fotos, new Date());

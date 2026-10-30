@@ -77,6 +77,34 @@
     return [...cache.values()];
   }
 
+  // Lê os JSON de listas/** ou alertas/ gravados pelo Power Automate. O fluxo sobrescreve o arquivo
+  // de um item editado, então o cache vale por caminho e data de modificação.
+  const cacheFluxo = new Map();
+  async function lerJsonDe(raizNome) {
+    const vistos = new Set(), r = [];
+    async function varrer(d, prefixo) {
+      for await (const [nome, h] of d.entries()) {
+        const cam = prefixo + '/' + nome;
+        if (h.kind === 'directory') { await varrer(h, cam); continue; }
+        if (!nome.endsWith('.json')) continue;
+        vistos.add(cam);
+        try {
+          const f = await h.getFile();
+          const c = cacheFluxo.get(cam);
+          if (c && c.modificado === f.lastModified) { r.push(c.obj); continue; }
+          const obj = JSON.parse(await f.text());
+          cacheFluxo.set(cam, { modificado: f.lastModified, obj });
+          r.push(obj);
+        } catch { const c = cacheFluxo.get(cam); if (c) r.push(c.obj); }
+      }
+    }
+    let d;
+    try { d = await pasta([raizNome], false); } catch { return []; }
+    await varrer(d, raizNome);
+    for (const k of [...cacheFluxo.keys()]) if (k.startsWith(raizNome + '/') && !vistos.has(k)) cacheFluxo.delete(k);
+    return r;
+  }
+
   async function gravarEvento(ev, subpasta) {
     const nome = `${ev.em.replace(/[:.]/g, '-')}_${ev.pessoaSlug || 'x'}_${ev.id}.json`;
     const copia = { ...ev }; delete copia.pessoaSlug;
@@ -110,5 +138,5 @@
     return URL.createObjectURL(await lerArquivo(caminho, nome));
   }
 
-  root.Armazenamento = { eventos: () => [...cache.values()], iniciar, escolherPasta, permitir, nomePasta, nomePendente, gravarArquivo, lerEventos, gravarEvento, listar, lerArquivo, remover, urlDe, criarPasta: (c) => pasta(c) };
+  root.Armazenamento = { eventos: () => [...cache.values()], lerJsonDe, iniciar, escolherPasta, permitir, nomePasta, nomePendente, gravarArquivo, lerEventos, gravarEvento, listar, lerArquivo, remover, urlDe, criarPasta: (c) => pasta(c) };
 })(window);

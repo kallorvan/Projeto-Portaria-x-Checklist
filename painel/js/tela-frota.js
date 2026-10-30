@@ -39,7 +39,7 @@
   }
 
   function formulario() {
-    const cont = st.estado.contadores[st.portaria] || { chegadas: 0, faltam: Regras.A_CADA };
+    const cont = (st.estado.contadores || {})[st.portaria] || { chegadas: 0, faltam: Regras.A_CADA };
     const f = {
       placaCavalo: inp({ id: 'frota-cavalo', list: 'dl-placas-cavalo', maxlength: 8 }),
       reb1: inp({ id: 'frota-reb1', list: 'dl-placas-reboque', maxlength: 8 }), reb2: inp({ id: 'frota-reb2', list: 'dl-placas-reboque', maxlength: 8 }), reb3: inp({ id: 'frota-reb3', list: 'dl-placas-reboque', maxlength: 8 }),
